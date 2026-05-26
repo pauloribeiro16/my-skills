@@ -53,7 +53,23 @@ pytest --version
 
 ---
 
-## 3. Project Structure
+## 3. Technology Stack
+
+| Layer | Technology | Version/Notes |
+|-------|-----------|---------------|
+| Runtime | Python | 3.12+ |
+| Package Manager | UV | 10-100x faster than pip, replaces pip/poetry |
+| API Framework | FastAPI | With Mangum adapter for Lambda |
+| AWS Services | Lambda, DynamoDB, S3, API Gateway | Region: us-east-1 |
+| IaC | Terraform | 1.5+, S3 backend + DynamoDB locking |
+| Database ORM | PynamoDB | For DynamoDB operations |
+| Validation | Pydantic | v2 models for API request/response |
+| Testing | pytest + moto | moto for AWS service mocking |
+| Linting | ruff + mypy | Strict mode |
+
+---
+
+## 4. Project Structure
 
 ```
 src/
@@ -120,6 +136,21 @@ docker-compose up -d postgres redis
 docker-compose down
 ```
 
+### Security Scanning
+```bash
+# Code security
+bandit -r src/
+
+# Dependency vulnerabilities
+pip-audit
+
+# Terraform security
+tfsec infrastructure/
+
+# Secret scanning
+detect-secrets scan --all-files
+```
+
 ---
 
 ## 5. Code Style
@@ -170,6 +201,99 @@ async def get_user(user_id: str) -> UserDict:
 def get(x):
     return db.query("SELECT * FROM users WHERE id = " + x)
 ```
+
+### PynamoDB Models
+
+```python
+from pynamodb.models import Model
+from pynamodb.attributes import UnicodeAttribute, NumberAttribute
+
+class UserModel(Model):
+    class Meta:
+        table_name = 'users'
+        region = 'us-east-1'  # CRITICAL: Must match table region
+
+    user_id = UnicodeAttribute(hash_key=True)
+    email = UnicodeAttribute()
+    created_at = NumberAttribute()
+    metadata = UnicodeAttribute(null=True)  # Use null=True for optional
+```
+
+- Always define `table_name` and `region` in Meta class
+- Use `batch_write()` and `batch_get()` for multiple items
+- Mark optional fields with `null=True` (saves storage costs)
+- Use conditional operations for concurrency control
+- Test with moto: `@mock_dynamodb` decorator
+
+### Pydantic Models
+
+```python
+from pydantic import BaseModel, Field, EmailStr
+
+class UserRequest(BaseModel):
+    email: EmailStr
+    name: str = Field(min_length=1, max_length=100)
+    age: int | None = Field(None, gt=0, lt=150)
+
+    class Config:
+        json_schema_extra = {
+            "example": {"email": "user@example.com", "name": "John Doe", "age": 30}
+        }
+```
+
+- Use for API request/response validation
+- `Field()` for constraints (min_length, gt, lt, regex)
+- Type unions (`|`) for optional fields
+- `Config.json_schema_extra` auto-generates OpenAPI docs
+
+### FastAPI + Lambda Integration
+
+```python
+from fastapi import FastAPI
+from mangum import Mangum
+
+app = FastAPI()
+
+@app.get("/users/{user_id}")
+async def get_user(user_id: str):
+    # Separate handler from business logic
+    return UserService().get_user(user_id)
+
+# Lambda handler
+handler = Mangum(app)
+```
+
+- Keep handlers thin, move logic to service classes
+- Initialize AWS clients outside handler for reuse (Lambda container reuse)
+- Use async patterns for all I/O operations
+- Handle cold starts: provisioned concurrency or SnapStart for critical endpoints
+- Environment variables for configuration (never hardcode)
+
+### Terraform
+
+```bash
+# Initialize and validate
+cd infrastructure
+terraform init
+terraform validate
+terraform fmt -recursive  # Always run before committing
+
+# Plan and apply
+terraform plan -var-file=environments/dev.tfvars -out=tfplan
+terraform apply tfplan
+
+# Multi-environment (workspaces)
+terraform workspace list
+terraform workspace select dev
+terraform workspace new staging
+```
+
+- Store state in S3 with DynamoDB locking
+- Use workspaces for environments (dev/staging/prod)
+- Tag all resources: environment, project, managed_by, cost_center
+- Use modules for reusable components
+- Document all variables with description and type
+- Enable versioning on S3 state bucket
 
 ---
 
@@ -264,7 +388,84 @@ pytest tests/unit/
 
 ---
 
-## 8. Boundaries
+## 8. CI/CD Pipeline
+
+### GitHub Actions Workflows
+- **CI**: `.github/workflows/ci.yml` (runs on all PRs)
+  - Stages: Lint → Type Check → Unit Tests → Security Scan → Build
+  - Must pass before merge allowed
+- **Deploy**: `.github/workflows/deploy.yml` (runs on main branch)
+  - Stages: Integration Tests → Terraform Plan → Manual Approval → Terraform Apply
+  - Separate jobs for staging and production
+
+### Local CI Simulation
+```bash
+# Run all CI checks locally before pushing
+ruff check src/
+mypy src/
+pytest tests/unit/
+bandit -r src/
+terraform fmt -check -recursive
+```
+
+### Deployment Environments
+- **Development**: Auto-deploy on push to `develop` branch
+- **Staging**: Auto-deploy on merge to `main` branch
+- **Production**: Manual approval required after staging validation
+
+### Merge Requirements
+- All CI checks pass (lint, type check, tests, security scan)
+- Code coverage ≥80%
+- No high or critical severity vulnerabilities
+- At least one review approval
+- Branch protection rules enforced
+
+### Production Deployment Gates
+1. Successful staging deployment and smoke tests
+2. Manual approval from team lead
+3. Deployment window (weekdays 10am-4pm EST, no Fridays)
+4. Rollback plan documented in deployment PR
+
+---
+
+## 9. Deployment
+
+### Local Development
+```bash
+uv run uvicorn src.main:app --reload  # FastAPI locally
+sam local invoke MyFunction -e events/test.json  # Test Lambda locally
+sam local start-api  # Local API Gateway
+```
+
+### Infrastructure Deployment
+```bash
+cd infrastructure
+terraform workspace select prod
+terraform plan -var-file=environments/prod.tfvars
+terraform apply -var-file=environments/prod.tfvars
+```
+
+### Rollback
+```bash
+terraform workspace select prod
+terraform apply -var-file=environments/prod.tfvars -target=aws_lambda_function.api -var="lambda_version=previous"
+```
+
+### Post-Deployment Validation
+```bash
+# Health check
+curl https://api.example.com/health
+
+# CloudWatch logs
+aws logs tail /aws/lambda/api --follow
+
+# Smoke tests
+pytest tests/smoke/
+```
+
+---
+
+## 10. Boundaries
 
 ### Allowed Without Prompting
 - Read any source file
@@ -290,7 +491,7 @@ pytest tests/unit/
 
 ---
 
-## 9. Good Examples
+## 11. Good Examples
 
 ### Patterns to Follow
 - `src/services/user.py` — Clean service layer with type hints
@@ -304,7 +505,7 @@ pytest tests/unit/
 
 ---
 
-## 10. Troubleshooting
+## 12. Troubleshooting
 
 ### Common Issues
 
@@ -322,7 +523,7 @@ pytest tests/unit/
 
 ---
 
-## 11. Additional Resources
+## 13. Additional Resources
 
 - [Link to API docs]
 - [Link to architecture docs]

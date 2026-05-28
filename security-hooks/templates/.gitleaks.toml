@@ -1,0 +1,43 @@
+title = "Project Gitleaks Configuration"
+
+[extend]
+useDefault = true
+
+# Disable specific default rules if needed
+# disabledRules = ["generic-api-key"]
+
+# Global allowlists for common false positives
+[[allowlists]]
+description = "Ignore baseline and config files"
+paths = [
+  '''\.secrets\.baseline$''',
+  '''\.gitleaks\.toml$''',
+  '''\.gitleaksignore$''',
+  '''package\.lock\.json$''',
+]
+
+[[allowlists]]
+description = "Ignore test files"
+paths = [
+  '''test_.*\.py$''',
+  '''.*_test\.py$''',
+  '''tests/.*''',
+  '''__tests__/.*''',
+]
+stopwords = [
+  '''test''',
+  '''example''',
+  '''mock''',
+  '''dummy''',
+  '''fake''',
+]
+
+# Example custom rule (uncomment and modify as needed)
+# [[rules]]
+# id = "custom-api-key"
+# description = "Custom API key"
+# regex = '''(?i)(custom_api_key|custom_key)\s*=\s*['"]([a-zA-Z0-9]{32})['"]'''
+# secretGroup = 3
+# entropy = 3.5
+# keywords = ["custom_api_key", "custom_key"]
+# tags = ["api", "custom"]

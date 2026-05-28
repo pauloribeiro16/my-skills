@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+        name: Detect secrets (gitleaks)
+        description: Scan for hardcoded secrets using gitleaks
+        args: ['--config', '.gitleaks.toml']
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: Detect secrets (detect-secrets)
+        description: Scan for secrets with baseline support
+        args: ['--baseline', '.secrets.baseline']
+        exclude: package.lock.json

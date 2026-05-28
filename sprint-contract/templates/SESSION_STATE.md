@@ -53,6 +53,21 @@ Next action: what to do next
 | 1 | CONTRACT-phase-1.md | PASS/FAIL | [N%] | YYYY-MM-DD |
 | 2 | CONTRACT-phase-2.md | PASS/FAIL | [N%] | YYYY-MM-DD |
 
+## Git State
+
+- **Current Branch:** [branch name]
+- **Last Commit:** [hash] — [message]
+- **Commits in Phase:** [N]
+- **Uncommitted Changes:** [none/pending]
+- **Merge Status:** [pending/completed/blocked]
+
+### Commit History
+
+| Hash | Message | Phase | Date |
+|------|---------|-------|------|
+| [hash] | feat: ... — phase 1/3 | 1 | YYYY-MM-DD |
+| [hash] | feat: ... — phase 2/3 | 2 | YYYY-MM-DD |
+
 ## Handoff Notes
 
 - Don't restart from scratch — read SESSION_STATE.md first

@@ -228,9 +228,53 @@ Each criterion must be TESTABLE — pass or fail, not subjective.
 7. If user disagrees with code-reviewer → record divergence in `execution/CALIBRATION_LOG.md`
 8. Update Criterion Effectiveness table in Quality Log
 9. After all pass → Update Quality Log
-10. If this is the 5th sprint → run Harness Audit (see below)
+10. **Commit validated sprint** (see Git Integration section for details)
+11. If this is the 5th sprint → run Harness Audit (see below)
+12. If phased goal and all phases PASS → follow merge flow in Git Integration → Branch Management
 
 **Why subagents:** Separation of concerns — the Planner orchestrates, the Executor implements, the code-reviewer verifies. This prevents self-evaluation bias (agents tend to approve their own work).
+
+## Git Integration
+
+### Commit Strategy
+
+- **Planner makes commits** (not Executor)
+- **One commit per validated sprint**
+- Only commits when code-reviewer gives **PASS**
+- If **FAIL** → STOP, no commit
+
+### Commit Message Format
+
+```
+feat(scope): description — phase N/M [PASS: X%]
+
+- Contract: CONTRACT-phase-N.md
+- Files: list of changed files
+- Score: X% (MUST: Y/Z, SHOULD: Y/Z)
+- Reviewer: [agent]
+```
+
+### Branch Management
+
+- **Single contract:** commit to current branch (master/main)
+- **Phased goal:** create branch `sprint/nome-do-objetivo`
+- All phases commit to this branch
+- After all PASS: ask user "Merge?"
+- User approves → merge to main → delete branch
+- If merge error → keep branch for debug
+
+### Security Hooks
+
+- Pre-commit hooks run before each commit
+- If secrets detected → commit blocked
+- Executor must clean before retry
+
+### Integration with Workflow
+
+The Git Integration is embedded into the contract workflow:
+
+- **Single contract:** after step 10 (commit), contract is complete
+- **Phased goal:** after each phase PASS → commit to sprint branch; after all phases PASS → follow merge flow
 
 ## Saturation Detection
 

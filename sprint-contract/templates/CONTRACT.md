@@ -123,3 +123,23 @@ Each criterion must be something you can TEST, not just check.
 - [ ] Executor implemented
 - [ ] code-reviewer verified
 - [ ] Quality Log updated (with pass@k results)
+
+---
+
+## Git Commit
+
+- [ ] Files staged and committed
+- [ ] Commit message follows format
+- [ ] No secrets detected (pre-commit hook)
+- [ ] Branch: [branch name]
+
+### Commit Details
+- **Branch:** `master` or `sprint/nome-do-objetivo`
+- **Commit Message:** 
+  ```
+  feat(scope): description — phase N/M [PASS: X%]
+  ```
+- **Files Included:**
+  - Contract file
+  - Code changes
+  - GOAL_DECOMPOSITION.md (if phased)

@@ -105,7 +105,7 @@ Use the `sprint-contract` skill to write `CONTRACT.md`. Key rules:
 
 ### Contract Template
 
-Copy from: `~/.config/opencode/skills/sprint-orchestrator/references/contract-template.md`
+Copy from: `sprint-contract/templates/CONTRACT.md`
 
 ---
 
@@ -209,7 +209,7 @@ Before delivering to user, verify Gate 3:
 
 ### Quality Log Template
 
-Copy from: `~/.config/opencode/skills/sprint-orchestrator/references/quality-log-template.md`
+Copy from: `sprint-contract/templates/QUALITY_LOG.md`
 
 ---
 
@@ -223,7 +223,7 @@ When resuming a session:
 
 ### Session State Template
 
-Copy from: `~/.config/opencode/skills/sprint-orchestrator/references/session-state-template.md`
+Copy from: `sprint-contract/templates/SESSION_STATE.md`
 
 ---
 
@@ -247,6 +247,8 @@ Copy from: `~/.config/opencode/skills/sprint-orchestrator/references/session-sta
 | Anti-pattern | Why |
 |-------------|-----|
 | Implement directly as Planner | You orchestrate, others execute |
+| Implement a contract yourself | ALWAYS dispatch Executor subagent (`task(subagent_type="general")`) |
+| Verify your own implementation | ALWAYS dispatch code-reviewer subagent — prevents self-evaluation bias |
 | Skip pre-flight checks | Hidden bugs propagate |
 | Launch Executor without contract | Scope creep, no verification |
 | Launch Validator before Executor | Nothing to validate |
@@ -273,9 +275,10 @@ STOP and ask user when:
 
 For templates and detailed reference:
 
-- `references/contract-template.md` — Contract template with done criteria
-- `references/quality-log-template.md` — Quality log format
-- `references/session-state-template.md` — Session state format
+- `sprint-contract/templates/CONTRACT.md` — Contract template with done criteria
+- `sprint-contract/templates/QUALITY_LOG.md` — Quality log format
+- `sprint-contract/templates/SESSION_STATE.md` — Session state format
+- `sprint-contract/templates/CALIBRATION_LOG.md` — Calibration log for evaluator tuning
 
 ---
 

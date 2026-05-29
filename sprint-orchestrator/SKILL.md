@@ -254,6 +254,20 @@ Copy from: `sprint-contract/templates/SESSION_STATE.md`
 | Launch Validator before Executor | Nothing to validate |
 | Skip Explore for unfamiliar code | Wrong assumptions lead to bugs |
 | Auto-pass validation | Binary evaluation only |
+| Skip commit between sprints | No traceability, rollback harder |
+
+## Process Enforcement
+
+If you catch yourself violating any rule:
+
+| Violation | Correction |
+|-----------|------------|
+| I implemented something | Stop → dispatch Executor with same spec |
+| I verified my own work | Stop → dispatch code-reviewer with same spec |
+| I forgot to commit | Stop → `git add + commit` → resume |
+| I skipped validation tier check | Stop → re-run Validator with tier enforcement |
+
+**The harness exists to prevent self-evaluation bias. Trust the process.**
 
 ---
 

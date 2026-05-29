@@ -260,22 +260,23 @@ If you cannot write a validation command for a criterion:
 
 ## After Contract Approved
 
-**MANDATORY: Always launch subagents. NEVER implement or verify yourself.**
+**CRITICAL: Planner NEVER implements or verifies. ALWAYS dispatch subagents.**
 
-1. **MANDATORY: Launch Executor subagent** (`task(subagent_type="general")`) to read CONTRACT.md and implement all criteria sequentially
-2. Executor runs trials (if `trials > 1` specified)
-3. Results recorded with pass@k metric
-4. **MANDATORY: Launch code-reviewer subagent** (`task(subagent_type="general")`) to verify each criterion independently
-5. code-reviewer checks partial credit scoring (SHOULD/NICE criteria contribute to overall score but don't block)
-6. If FAIL → launch Executor subagent again to fix → launch code-reviewer subagent again to re-check (max 3)
-7. If user disagrees with code-reviewer → record divergence in `execution/CALIBRATION_LOG.md`
-8. Update Criterion Effectiveness table in Quality Log
-9. After all pass → Update Quality Log
-10. **Commit validated sprint** (see Git Integration section for details)
-11. If this is the 5th sprint → run Harness Audit (see below)
-12. If phased goal and all phases PASS → follow merge flow in Git Integration → Branch Management
+| Step | Action | Who |
+|------|--------|-----|
+| 1 | Launch Executor subagent to implement criteria | `task(subagent_type="general")` |
+| 2 | Executor runs trials if `trials > 1` | Executor |
+| 3 | Record pass@k results | Executor |
+| 4 | Launch code-reviewer subagent to verify | `task(subagent_type="general")` |
+| 5 | If FAIL → Executor fixes → code-reviewer re-checks | max 3 cycles |
+| 6 | If user disagrees → record in CALIBRATION_LOG.md | code-reviewer |
+| 7 | Update Criterion Effectiveness table | code-reviewer |
+| 8 | **COMMIT validated sprint immediately** | Planner |
+| 9 | If 5th sprint → run Harness Audit | Planner |
 
-**Why subagents:** Separation of concerns — the Planner orchestrates, the Executor implements, the code-reviewer verifies. This prevents self-evaluation bias (agents tend to approve their own work).
+**Rule: Planner does NOT implement. Planner does NOT verify. Planner only delegates.**
+
+**Rule: Commit AFTER validation PASS, BEFORE next sprint.**
 
 ## Git Integration
 
@@ -329,6 +330,52 @@ If 3+ consecutive contracts score 100% on all criteria, the evaluation has satur
 - Consider increasing the scope of contracts
 
 The Quality Log (`execution/QUALITY_LOG.md`) tracks historical scores. Review it before writing a new contract. If recent entries show consistent 100%, raise the bar.
+
+## Process Rules (Enforcement)
+
+These rules are **mandatory**. Violations indicate the harness is not being followed correctly.
+
+### Rule 1: Never Self-Implement
+
+```
+IF planner.implements_any_criterion:
+    → VIOLATION: "Planner must delegate to Executor"
+    → DO NOT PROCEED: re-dispatch Executor
+```
+
+### Rule 2: Never Self-Verify
+
+```
+IF planner.verifies_own_work:
+    → VIOLATION: "Planner must use code-reviewer subagent"
+    → DO NOT PROCEED: re-dispatch code-reviewer
+```
+
+### Rule 3: Commit After Each Sprint
+
+```
+AFTER code-reviewer returns PASS:
+    → git add + git commit (immediate)
+    → DO NOT start next sprint without commit
+    → Branch: sprint/<goal-name> for multi-phase, master for single
+```
+
+### Rule 4: Validation Tier Enforcement
+
+```
+FOR each MUST criterion:
+    IF validation.tier < T3:
+        → FAIL the criterion
+        → Report: "MUST requires T3 behavioral validation"
+```
+
+### Rule 5: No Contract Without Validation Commands
+
+```
+IF criterion.has_no_validation_command:
+    → FAIL the criterion
+    → DO NOT APPROVE CONTRACT until all criteria have commands
+```
 
 ## Evaluator Calibration
 

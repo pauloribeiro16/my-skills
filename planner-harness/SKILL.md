@@ -147,11 +147,29 @@ After all sprints PASS, append to `execution/QUALITY_LOG.md`.
 | Binary evaluation | Clear, actionable feedback |
 | Never skip validation | Quality gate |
 
+## Escape Hatches
+
+STOP and ask user when:
+
+| Situation | Action |
+|-----------|--------|
+| 3 failures on any criterion | STOP, report to user |
+| Context >70% | Activate `context-checkpoint` skill |
+| Neo4j ports wrong (7474/7687) | Fix immediately (critical) |
+| Executor finds unexpected blocker | STOP, ask user for guidance |
+| User rejects contract | Revise and re-present (max 3 rounds) |
+
 ## Resources
 
-- `references/executor-prompt-template.md` — Full Executor prompt
-- `references/validator-prompt-template.md` — Full Validator prompt
-- `references/contract-pipeline-template.md` — Multi-sprint pipeline
+### References
+- `references/executor-prompt-template.md` — Full Executor prompt with tier validation enforcement
+- `references/validator-prompt-template.md` — Full Validator prompt with tier checks
+- `references/contract-pipeline-template.md` — Multi-sprint pipeline, escape hatches, user presentation format
+
+### Templates
+- `sprint-contract/templates/CONTRACT.md` — Contract template
+- `sprint-contract/templates/GOAL_DECOMPOSITION.md` — Phased goal template
+- `sprint-contract/templates/QUALITY_LOG.md` — Quality log format
 
 ## Agent Configuration
 

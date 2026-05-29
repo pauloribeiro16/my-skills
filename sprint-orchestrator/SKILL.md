@@ -71,10 +71,14 @@ After each PASS: **COMMIT immediately** before next sprint.
 
 ## Resources
 
+### Core Skills
 - `sprint-contract/SKILL.md` — Contract creation with validation tiers
 - `sprint-contract/templates/CONTRACT.md` — Contract template
 - `sprint-contract/templates/QUALITY_LOG.md` — Quality log format
 - `sprint-contract/templates/SESSION_STATE.md` — Session state format
+
+### References
+- `references/execution-phases.md` — All 6 phases, architecture diagram, session continuity, process enforcement, escape hatches, subagent dispatch matrix
 
 ## Use When
 

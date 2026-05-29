@@ -70,10 +70,19 @@ Every MUST criterion needs a **Tier 3** (behavioral) validation — not just syn
 
 ## Resources
 
+### Templates
 - `templates/CONTRACT.md` — Contract template with validation tiers
-- `references/contract-workflow.md` — Detailed workflow diagrams
-- `references/phased-decomposition.md` — Multi-phase goal breakdown
-- `references/validation-tiers.md` — Tier system examples and checklist
+- `templates/GOAL_DECOMPOSITION.md` — Phased goal decomposition template
+- `templates/QUALITY_LOG.md` — Quality log format
+- `templates/CALIBRATION_LOG.md` — Calibration log for evaluator tuning
+- `templates/SESSION_STATE.md` — Session state format
+
+### References
+- `references/contract-workflow.md` — Detailed workflow, correction loop, negotiation rounds
+- `references/phased-decomposition.md` — When to decompose, phased goal workflow, integration
+- `references/validation-tiers.md` — Tier system examples and Requirements Engineering checklist
+- `references/quality-tracking.md` — Quality Log, Calibration Log, Saturation Detection, Harness Audit
+- `references/git-integration.md` — Commit strategy, message format, branch management, security hooks
 
 ## Use When
 

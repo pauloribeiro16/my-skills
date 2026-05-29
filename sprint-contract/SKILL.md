@@ -1,453 +1,80 @@
 ---
 name: sprint-contract
-description: "Use before any implementation with 3+ file changes or complex tasks. Creates a structured contract with done criteria, validation commands, and quality dimensions. Supports phased goal decomposition for large objectives into iterative, smaller sprints. Inspired by Anthropic harness design."
+description: "Use before any implementation with 3+ file changes or complex tasks. Creates structured contracts with done criteria, validation commands, and quality dimensions. Supports phased goal decomposition. Trigger: implement feature, run sprint, execute contract, develop feature, create a contract"
 ---
 
 # Sprint Contract Skill
 
-Creates a structured implementation contract before coding. Based on Anthropic's generator-evaluator sprint negotiation pattern.
+Creates structured implementation contracts before coding. Based on Anthropic's generator-evaluator pattern with validation tiers and process enforcement.
 
 ## When to Activate
 
 - Tasks with 3+ file changes
 - Complex features requiring multiple steps
 - Large goals that may need phased decomposition
-- Any implementation that needs validation
-- When unsure about scope or acceptance criteria
+- When you need verifiable implementation criteria
 
-## Trials
+## What It Covers
 
-Non-deterministic agents (LLM-based) produce different outputs on each run. To account for variance, contracts support **pass@k** evaluation: run the same task *k* times and measure how many trials pass.
-
-- **Default:** `trials: 3` in the contract header
-- A criterion passes if it succeeds in ≥1 of k trials (pass@k)
-- For deterministic changes (refactors, config), `trials: 1` is sufficient
-
-Example contract header:
-
-```yaml
-trials: 3
-pass_threshold: 2/3
-```
-
-## Phased Goal Decomposition
-
-When the user presents a large goal, the Planner may decompose it into smaller, iterative, and phased objectives. This is the **Phased Goal Decomposition** workflow.
-
-### When to Decompose
-
-The Planner should ask the user if they want to decompose when **any** of the following criteria are met:
-
-| Criterion | Description | Example |
-|-----------|-------------|---------|
-| **C1** | Goal describes multiple distinct functionalities | "Create auth system + dashboard + API" |
-| **C2** | Mentions 3+ different components/architectures | "Frontend + Backend + Database + Cache" |
-| **C3** | Requires changes to 5+ files (estimated) | "Change schema, models, controllers, views, tests" |
-| **C4** | Uses sequence connectors | "First X, then Y, finally Z" |
-| **C5** | Involves non-trivial architectural decisions | "Choose between microservices or monolith" |
-
-> **Max phases:** 5-7. More than that creates excessive overhead.
-
-### Decomposition Workflow
-
-```
-1. Planner analyzes goal → checks criteria C1-C5
-   └─ If NONE match → create single CONTRACT.md (skip to normal workflow)
-
-2. If ANY match → ask user via question tool:
-   "This goal seems large. Do you want to decompose it into
-    multiple phases with separate contracts?"
-
-3. If NO → create single CONTRACT.md
-
-4. If YES → Planner asks questions via question tool:
-   a) Confirm the final objective
-   b) Identify dependencies between parts
-   c) Define implementation order
-   d) Estimate files per phase
-
-5. Planner generates GOAL_DECOMPOSITION.md
-
-6. User approves decomposition (1 round)
-
-7. Planner creates N CONTRACT.md (one per phase)
-   - Each contract: specific phase with limited scope
-   - Contract N+1 references previous phase as dependency
-
-8. User approves ALL contracts at once
-
-9. Sequential execution:
-   For each phase (1..N):
-     a) Launch Executor subagent for CONTRACT-phase-N.md
-     b) Launch code-reviewer subagent to validate
-     c) If PASS → update GOAL_DECOMPOSITION.md
-     d) If FAIL after 3 attempts → STOP, ask user
-     e) If user says "continue" → next phase
-
-10. When all phases PASS:
-    - Update QUALITY_LOG.md with full summary
-    - Run Harness Audit if this is the 5th sprint
-```
-
-### Contracts in Phased Mode
-
-Each phase gets its own contract. Contracts are "guard rails" — they define the WHAT (acceptance criteria), not the HOW (implementation). The Executor subagent has freedom to choose how to implement within the criteria.
-
-### Integration with Existing Workflows
-
-- **Saturation Detection:** Applies per phase. If 3+ consecutive phases score 100%, increase complexity.
-- **Harness Audit:** Runs after completing the full goal (counts as 1 sprint).
-- **Calibration Log:** Records divergences per phase.
-- **Quality Log:** Entry per phase + overall goal summary.
+1. **Contract Creation** — Write testable criteria with validation commands
+2. **Subagent Dispatch** — Executor implements, code-reviewer verifies (Planner never does either)
+3. **Validation Tiers** — T1-T4 system for ensuring criteria are actually testable
+4. **Process Enforcement** — Rules that prevent self-implementation and self-verification
+5. **Phased Goals** — Decompose large goals into sequential sprints
+6. **Quality Tracking** — Quality Log, Calibration Log, Harness Audit
 
 ## Contract Workflow
 
 ```
+CONTRACT → APPROVE → EXECUTE (Executor) → VALIDATE (code-reviewer) → COMMIT
+```
+
 1. Planner writes CONTRACT.md (from template)
 2. User approves (max 3 negotiation rounds)
-3. Executor reads CONTRACT.md
-4. Executor implements criteria sequentially
-5. code-reviewer verifies each criterion
-   - If FAIL → Executor fixes → code-reviewer re-checks (max 3)
-   - If still FAIL after 3 → STOP and ask user
-6. After all PASS → code-reviewer appends to QUALITY_LOG.md
-```
+3. **LAUNCH Executor subagent** — `task(subagent_type="general")`
+4. **LAUNCH code-reviewer subagent** — `task(subagent_type="general")`
+5. If FAIL → Executor fixes → code-reviewer re-checks (max 3 cycles)
+6. **COMMIT validated sprint** — Planner does this, not Executor
+7. After all PASS → update Quality Log
 
-## Contract Template
+**Rule: Planner NEVER implements. Planner NEVER verifies. Planner only delegates.**
 
-Copy from: `.opencode/skills/sprint-contract/templates/CONTRACT.md`
+## Validation Tiers
 
-Or use the embedded version below:
-
-```markdown
-# CONTRACT — [Feature Name]
-**Date:** YYYY-MM-DD
-**Planner:** [name]
-**Status:** DRAFT → NEGOTIATING → APPROVED → IMPLEMENTING → VALIDATED
-
-## Trials
-`trials: 3` (default)
-
-## Scope
-[What files change and why]
-
-## Output Criteria (what was produced)
-| # | Criterion | Weight | Result |
-|---|-----------|--------|--------|
-| 1 | [testable, binary pass/fail] | MUST | — |
-| 2 | [testable, binary pass/fail] | MUST | — |
-| 3 | [testable, binary pass/fail] | SHOULD | — |
-
-## Outcome Criteria (system state after)
-| # | Criterion | Weight | Result |
-|---|-----------|--------|--------|
-| 1 | [system state check] | MUST | — |
-| 2 | [system state check] | SHOULD | — |
-
-### Scoring Rules
-1. MUST gate: any MUST fails → FAIL
-2. SHOULD gate: <50% pass → FAIL
-3. NICE: bonus only
-4. Score: (passed / total) × 100%
-
-## Validation Commands
-| What | Command | Expected |
-|------|---------|----------|
-| File compiles | `python -m py_compile [path]` | 0 |
-| Tests pass | `pytest [path] -v` | PASS |
-
-## Quality Dimensions
-| Dimension | Threshold |
-|-----------|-----------|
-| Correctness | 100% |
-| Pattern Compliance | ≥3/4 |
-| No Regressions | 100% |
-| Data Integrity | 100% |
-
-## Files to Change
-| File | Action |
-|------|--------|
-| `src/x.py` | create/modify |
-
-## Correction Loop
-- Max 3 cycles per criterion
-- After 3 failures: STOP and ask user
-```
-
-## Negotiation Rounds
-
-| Round | Action |
-|-------|--------|
-| 1 | Planner writes initial contract → presents to user |
-| 2 | User requests changes (if any) |
-| 3 | Final changes → user approves |
-
-Max 3 rounds. After that, present final version for approval or abandonment.
-
-## Good vs Bad Criteria
-
-Each criterion must be TESTABLE — pass or fail, not subjective.
-
-### Severity Levels
-
-| Level | Meaning | Examples |
-|-------|---------|----------|
-| **MUST** | Blocking — must pass for contract to succeed | `File compiles without errors`, `All tests pass` |
-| **SHOULD** | Important — contract succeeds but flags improvement | `Follows naming convention`, `Code coverage ≥80%` |
-| **NICE** | Optional — tracked but never blocks | `Includes docstrings`, `Error messages are user-friendly` |
-
-### Examples
-
-| Good ✅ | Bad ❌ |
-|--------|--------|
-| `File compiles without errors` | `Code looks good` |
-| `Function X accepts a, b, c and returns dict` | `Function works correctly` |
-| `All tests in test_file.py pass` | `Tests pass` |
-
-## Good vs Bad Validation Commands
-
-Every criterion must have a **testable validation command** — a command that returns exit 0 on pass, non-zero on fail. If you cannot write such a command, the criterion is not ready.
-
-### The Tier System
+Every MUST criterion needs a **Tier 3** (behavioral) validation — not just syntax.
 
 | Tier | Tests | Required for |
 |------|-------|--------------|
-| **T1 Syntax** | `python -m py_compile` | NICE criteria |
-| **T2 Import/Runtime** | `python -c "from module import X"` | SHOULD criteria |
-| **T3 Behavioral** | `python -c "assert function_behavior"` | MUST criteria |
-| **T4 Integration** | `python -c "graph.invoke(mock_state)"` | Complex features |
+| T1 Syntax | `python -m py_compile` | NICE only |
+| T2 Import | `python -c "from module import X"` | SHOULD minimum |
+| T3 Behavioral | `python -c "assert function_behavior"` | MUST minimum |
+| T4 Integration | `python -c "graph.invoke(state)"` | Complex features |
 
-### Examples
-
-| Criterion | Bad Validation ❌ | Good Validation ✅ | Tier |
-|-----------|------------------|-------------------|------|
-| "File compiles" | `ls file.py` | `python -m py_compile file.py` | T1 |
-| "Module imports" | `grep "import" file.py` | `python -c "from module import func"` | T2 |
-| "Error handling works" | "Code has try/except" | `python -c "Node(state); assert state['errors']"` | T3 |
-| "Graph builds" | `grep "compile" graph.py` | `python -c "g=build_graph(); list(g.nodes)"` | T3 |
-| "E2E smoke test" | "Agent runs" | `python -c "result=agent.invoke(input); assert 'output' in result"` | T4 |
-
-### Requirements Engineering Checklist
-
-Before writing a criterion, ask:
-
-1. **Can I run a command that proves this works?** (If not, rewrite criterion)
-2. **Does my command test behavior or just syntax?** (T3+ for MUST)
-3. **Can this be mocked?** (If needs external service, provide mock data)
-4. **What's the exact expected output?** (Binary PASS/FAIL, no subjective)
-5. **Does this command survive code changes?** (Don't test line numbers or implementation details)
-6. **Is this repeatable?** (Same command = same result)
-
-### When a Criterion Can't Be Tested
-
-If you cannot write a validation command for a criterion:
-1. **Rewrite the criterion** until it becomes testable
-2. **Split the criterion** into smaller testable parts
-3. **Mark as N/A** only if truly not testable (and document why)
-
-> **Rule:** A criterion without a validation command is not a criterion — it's a wish.
-
-## Before Creating Contract
-
-1. Read relevant AGENTS.md files (root + sub-AGENTS.md)
-2. Read `execution/CALIBRATION_LOG.md` for historical divergences
-3. Review `execution/QUALITY_LOG.md` — if 3+ consecutive 100%, raise the bar
-4. Check Criterion Effectiveness table for CANDIDATE FOR REMOVAL items
-5. Understand existing code patterns
-6. Identify all files that need changes
-7. **For each criterion: write a Tier 3 validation command before finalizing**
-8. If Calibration Log has OPEN items → address them in new criteria
-
-## After Contract Approved
-
-**CRITICAL: Planner NEVER implements or verifies. ALWAYS dispatch subagents.**
-
-| Step | Action | Who |
-|------|--------|-----|
-| 1 | Launch Executor subagent to implement criteria | `task(subagent_type="general")` |
-| 2 | Executor runs trials if `trials > 1` | Executor |
-| 3 | Record pass@k results | Executor |
-| 4 | Launch code-reviewer subagent to verify | `task(subagent_type="general")` |
-| 5 | If FAIL → Executor fixes → code-reviewer re-checks | max 3 cycles |
-| 6 | If user disagrees → record in CALIBRATION_LOG.md | code-reviewer |
-| 7 | Update Criterion Effectiveness table | code-reviewer |
-| 8 | **COMMIT validated sprint immediately** | Planner |
-| 9 | If 5th sprint → run Harness Audit | Planner |
-
-**Rule: Planner does NOT implement. Planner does NOT verify. Planner only delegates.**
-
-**Rule: Commit AFTER validation PASS, BEFORE next sprint.**
-
-## Git Integration
-
-### Commit Strategy
-
-- **Planner makes commits** (not Executor)
-- **One commit per validated sprint**
-- Only commits when code-reviewer gives **PASS**
-- If **FAIL** → STOP, no commit
-
-### Commit Message Format
-
-```
-feat(scope): description — phase N/M [PASS: X%]
-
-- Contract: CONTRACT-phase-N.md
-- Files: list of changed files
-- Score: X% (MUST: Y/Z, SHOULD: Y/Z)
-- Reviewer: [agent]
-```
-
-### Branch Management
-
-- **Single contract:** commit to current branch (master/main)
-- **Phased goal:** create branch `sprint/nome-do-objetivo`
-- All phases commit to this branch
-- After all PASS: ask user "Merge?"
-- User approves → merge to main → delete branch
-- If merge error → keep branch for debug
-
-### Security Hooks
-
-- Pre-commit hooks run before each commit
-- If secrets detected → commit blocked
-- Executor must clean before retry
-
-### Integration with Workflow
-
-The Git Integration is embedded into the contract workflow:
-
-- **Single contract:** after step 10 (commit), contract is complete
-- **Phased goal:** after each phase PASS → commit to sprint branch; after all phases PASS → follow merge flow
-
-## Saturation Detection
-
-If 3+ consecutive contracts score 100% on all criteria, the evaluation has saturated — there is no signal for improvement. This means:
-
-- Criteria are too easy and need to be made harder
-- Add SHOULD/NICE criteria that stretch quality
-- Introduce adversarial test cases or edge-case coverage
-- Consider increasing the scope of contracts
-
-The Quality Log (`execution/QUALITY_LOG.md`) tracks historical scores. Review it before writing a new contract. If recent entries show consistent 100%, raise the bar.
+**MUST criterion with only T1/T2 validation → FAIL the criterion**
 
 ## Process Rules (Enforcement)
 
-These rules are **mandatory**. Violations indicate the harness is not being followed correctly.
+| Rule | What |
+|------|------|
+| Never Self-Implement | Always dispatch Executor |
+| Never Self-Verify | Always dispatch code-reviewer |
+| Commit After Sprint | `git add + commit` before next sprint |
+| Tier Enforcement | MUST requires T3+ validation |
+| Validation Required | No criterion without command |
 
-### Rule 1: Never Self-Implement
+## Quality Tracking
 
-```
-IF planner.implements_any_criterion:
-    → VIOLATION: "Planner must delegate to Executor"
-    → DO NOT PROCEED: re-dispatch Executor
-```
+- **Quality Log** — Record score after each validated sprint
+- **Calibration Log** — Track divergences between reviewer and user judgment
+- **Harness Audit** — Every 5 sprints, review what never catches issues
 
-### Rule 2: Never Self-Verify
+## Resources
 
-```
-IF planner.verifies_own_work:
-    → VIOLATION: "Planner must use code-reviewer subagent"
-    → DO NOT PROCEED: re-dispatch code-reviewer
-```
+- `templates/CONTRACT.md` — Contract template with validation tiers
+- `references/contract-workflow.md` — Detailed workflow diagrams
+- `references/phased-decomposition.md` — Multi-phase goal breakdown
+- `references/validation-tiers.md` — Tier system examples and checklist
 
-### Rule 3: Commit After Each Sprint
+## Use When
 
-```
-AFTER code-reviewer returns PASS:
-    → git add + git commit (immediate)
-    → DO NOT start next sprint without commit
-    → Branch: sprint/<goal-name> for multi-phase, master for single
-```
-
-### Rule 4: Validation Tier Enforcement
-
-```
-FOR each MUST criterion:
-    IF validation.tier < T3:
-        → FAIL the criterion
-        → Report: "MUST requires T3 behavioral validation"
-```
-
-### Rule 5: No Contract Without Validation Commands
-
-```
-IF criterion.has_no_validation_command:
-    → FAIL the criterion
-    → DO NOT APPROVE CONTRACT until all criteria have commands
-```
-
-## Evaluator Calibration
-
-Before writing a new contract, the Planner should read `execution/CALIBRATION_LOG.md` and adjust criteria based on historical divergences.
-
-### Calibration Workflow
-
-```
-1. code-reviewer reviews → records result in Quality Log
-2. If user disagrees with verdict → user flags divergence
-3. code-reviewer appends entry to CALIBRATION_LOG.md
-4. Before next contract → Planner reads CALIBRATION_LOG
-5. Planner adjusts criteria (strengthen/relax/simplify)
-6. Run 3 sprints → mark action as VALIDATED if no recurrence
-```
-
-### When to Calibrate
-
-- After any sprint where user manually overrides code-reviewer
-- Every 5 sprints as routine review
-- When Quality Log shows systematic bias (all PASS or all FAIL)
-
-### Calibration Actions
-
-| Divergence Type | Action |
-|-----------------|--------|
-| False positive (reviewer PASS, user FAIL) | Strengthen criterion or add validation command |
-| False negative (reviewer FAIL, user PASS) | Simplify criterion or downgrade MUST → SHOULD |
-| Same criterion fails 3+ times | Consider if criterion is load-bearing or noise |
-
----
-
-## Harness Audit
-
-Every component in the harness encodes an assumption about what the model cannot do on its own. Audit periodically to find overhead.
-
-### Audit Workflow
-
-```
-1. Read Quality Log — last 5 sprints
-2. Review Criterion Effectiveness table
-3. Identify components that never caught issues
-4. Remove one component from next contract
-5. Track if quality drops
-6. If no drop → remove permanently
-7. If quality drops → restore component
-```
-
-### Effectiveness Classification
-
-| Fail Rate | Classification | Action |
-|-----------|----------------|--------|
-| >30% | CRITICAL | Keep — load-bearing |
-| 10-30% | USEFUL | Keep — catches real regressions |
-| 1-10% | MARGINAL | Consider merging with another criterion |
-| 0% (5+ sprints) | CANDIDATE FOR REMOVAL | Test removing in next sprint |
-
-### Audit Rules
-
-- Remove ONE component at a time (never multiple)
-- Run at least 3 sprints before declaring a component unnecessary
-- If a removed component was actually needed, restore immediately
-- Record all audit decisions in CALIBRATION_LOG.md
-
----
-
-## Templates Available
-
-| Template | Path |
-|----------|------|
-| Contract | `.opencode/skills/sprint-contract/templates/CONTRACT.md` |
-| Goal Decomposition | `.opencode/skills/sprint-contract/templates/GOAL_DECOMPOSITION.md` |
-| Quality Log | `.opencode/skills/sprint-contract/templates/QUALITY_LOG.md` |
-| Calibration Log | `execution/CALIBRATION_LOG.md` |
-| Session State | `.opencode/skills/sprint-contract/templates/SESSION_STATE.md` |
+You need a systematic implementation approach with verifiable criteria and independent verification — not just "implement this and hope it works."

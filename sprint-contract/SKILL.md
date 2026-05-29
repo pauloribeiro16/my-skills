@@ -68,6 +68,27 @@ Every MUST criterion needs a **Tier 3** (behavioral) validation — not just syn
 - **Calibration Log** — Track divergences between reviewer and user judgment
 - **Harness Audit** — Every 5 sprints, review what never catches issues
 
+## Escape Hatches
+
+STOP and ask user when:
+
+| Situation | Action |
+|-----------|--------|
+| 3 failures on any criterion | STOP, report to user |
+| Context >70% | Activate `context-checkpoint` skill |
+| Neo4j ports wrong (7474/7687) | Fix immediately (critical) |
+| Executor finds unexpected blocker | STOP, ask user for guidance |
+| User rejects contract | Revise and re-present (max 3 rounds)
+
+## Agent Configuration
+
+| Agent | Model | Role |
+|-------|-------|------|
+| **planner** | `zai-coding-plan/glm-5.1` | Orchestrator (loads this skill) |
+| **executor** | `minimax/MiniMax-M2.7` | Implementation |
+| **validator** | `minimax/MiniMax-M2.7` | Verification |
+| **explore** | `zai-coding-plan/glm-5.1` | Fast exploration
+
 ## Resources
 
 ### Templates
@@ -83,6 +104,10 @@ Every MUST criterion needs a **Tier 3** (behavioral) validation — not just syn
 - `references/validation-tiers.md` — Tier system examples and Requirements Engineering checklist
 - `references/quality-tracking.md` — Quality Log, Calibration Log, Saturation Detection, Harness Audit
 - `references/git-integration.md` — Commit strategy, message format, branch management, security hooks
+- `references/execution-phases.md` — All 6 phases, pre-flight checks, explore subagent template
+- `references/executor-prompt-template.md` — Full Executor prompt with tier validation enforcement
+- `references/validator-prompt-template.md` — Full Validator prompt with tier checks
+- `references/pipeline-template.md` — Multi-sprint pipeline, escape hatches, user presentation format
 
 ## Use When
 

@@ -204,6 +204,49 @@ Each criterion must be TESTABLE — pass or fail, not subjective.
 | `Function X accepts a, b, c and returns dict` | `Function works correctly` |
 | `All tests in test_file.py pass` | `Tests pass` |
 
+## Good vs Bad Validation Commands
+
+Every criterion must have a **testable validation command** — a command that returns exit 0 on pass, non-zero on fail. If you cannot write such a command, the criterion is not ready.
+
+### The Tier System
+
+| Tier | Tests | Required for |
+|------|-------|--------------|
+| **T1 Syntax** | `python -m py_compile` | NICE criteria |
+| **T2 Import/Runtime** | `python -c "from module import X"` | SHOULD criteria |
+| **T3 Behavioral** | `python -c "assert function_behavior"` | MUST criteria |
+| **T4 Integration** | `python -c "graph.invoke(mock_state)"` | Complex features |
+
+### Examples
+
+| Criterion | Bad Validation ❌ | Good Validation ✅ | Tier |
+|-----------|------------------|-------------------|------|
+| "File compiles" | `ls file.py` | `python -m py_compile file.py` | T1 |
+| "Module imports" | `grep "import" file.py` | `python -c "from module import func"` | T2 |
+| "Error handling works" | "Code has try/except" | `python -c "Node(state); assert state['errors']"` | T3 |
+| "Graph builds" | `grep "compile" graph.py` | `python -c "g=build_graph(); list(g.nodes)"` | T3 |
+| "E2E smoke test" | "Agent runs" | `python -c "result=agent.invoke(input); assert 'output' in result"` | T4 |
+
+### Requirements Engineering Checklist
+
+Before writing a criterion, ask:
+
+1. **Can I run a command that proves this works?** (If not, rewrite criterion)
+2. **Does my command test behavior or just syntax?** (T3+ for MUST)
+3. **Can this be mocked?** (If needs external service, provide mock data)
+4. **What's the exact expected output?** (Binary PASS/FAIL, no subjective)
+5. **Does this command survive code changes?** (Don't test line numbers or implementation details)
+6. **Is this repeatable?** (Same command = same result)
+
+### When a Criterion Can't Be Tested
+
+If you cannot write a validation command for a criterion:
+1. **Rewrite the criterion** until it becomes testable
+2. **Split the criterion** into smaller testable parts
+3. **Mark as N/A** only if truly not testable (and document why)
+
+> **Rule:** A criterion without a validation command is not a criterion — it's a wish.
+
 ## Before Creating Contract
 
 1. Read relevant AGENTS.md files (root + sub-AGENTS.md)
@@ -212,7 +255,7 @@ Each criterion must be TESTABLE — pass or fail, not subjective.
 4. Check Criterion Effectiveness table for CANDIDATE FOR REMOVAL items
 5. Understand existing code patterns
 6. Identify all files that need changes
-7. Think about how to verify each change
+7. **For each criterion: write a Tier 3 validation command before finalizing**
 8. If Calibration Log has OPEN items → address them in new criteria
 
 ## After Contract Approved

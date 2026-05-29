@@ -24,11 +24,26 @@ Read the approved contract at: {CONTRACT_PATH}
 4. Identify ALL files that should exist/modify
 
 ### Phase 2 — Verify Each Criterion
+
 For EACH criterion in the contract:
-1. Run the validation command (if provided)
-2. Inspect the relevant file(s)
-3. Check the specific requirement
-4. Mark: PASS or FAIL (binary — no "almost")
+1. Find the validation command in the contract (look under Validation Commands section)
+2. Run the validation command — **ACTUALLY EXECUTE IT** (not just check file exists)
+3. For MUST criteria: validation MUST be Tier 3 (behavioral) or higher
+4. Inspect the relevant file(s)
+5. Check the specific requirement
+6. Mark: PASS or FAIL (binary — no "almost")
+
+### Validation Tier Rules
+
+| Tier | Tests | Required for |
+|------|-------|--------------|
+| T1 Syntax | `python -m py_compile` | NICE only |
+| T2 Import/Runtime | `python -c "from module import X"` | SHOULD minimum |
+| T3 Behavioral | `python -c "assert function_behavior"` | MUST minimum |
+| T4 Integration | `python -c "graph.invoke(mock_state)"` | Complex features |
+
+**If a MUST criterion has only T1/T2 validation → FAIL the criterion** (not testable enough).
+**If no validation command exists for a criterion → FAIL the criterion** (not a real criterion).
 
 ### Phase 3 — Quality Dimensions
 Check these additional dimensions:

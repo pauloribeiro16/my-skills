@@ -32,10 +32,12 @@ Read the approved contract at: {CONTRACT_PATH}
 6. After each file: run `python -m py_compile path/to/file.py`
 
 ### After Implementing
-1. Run ALL validation commands from the contract
-2. Report exactly what was created, modified, or deleted
-3. Report compilation results for all changed files
-4. Do NOT say "looks good" — leave evaluation to Validator
+1. Run ALL validation commands from the contract — **ACTUALLY EXECUTE THEM**
+2. For MUST criteria: ensure at least Tier 3 validation exists (behavioral, not just syntax)
+3. If a criterion lacks a proper validation command → FLAG IT — do not skip
+4. Report exactly what was created, modified, or deleted
+5. Report compilation results for all changed files
+6. Do NOT say "looks good" — leave evaluation to Validator
 
 ## Critical Rules
 

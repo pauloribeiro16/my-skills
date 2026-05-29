@@ -75,11 +75,71 @@ Each criterion must be something you can TEST, not just check.
 
 ## Validation Commands
 
+Validation commands are grouped by **tier** — the tier determines which criteria weight requires this level of rigor.
+
+| Tier | What it tests | When Required |
+|------|---------------|---------------|
+| **T1** | Syntax — file compiles | NICE criteria minimum |
+| **T2** | Import & Runtime — module loads, objects instantiate | SHOULD criteria minimum |
+| **T3** | Behavioral — function output, error handling, state changes | MUST criteria minimum |
+| **T4** | Integration — E2E smoke tests with mock data | SHOULD/NICE for complex features |
+
+### Tier 1 — Syntax
+
 | What | Command | Expected |
-|------|---------|-----------|
-| File compiles | `python -m py_compile [path]` | 0 |
-| Tests pass | `pytest [path] -v` | PASS |
-| Secrets OK | `grep -r "password\|secret" [path]` | no hardcoded |
+|------|---------|----------|
+| File compiles | `python -m py_compile [path]` | exit 0 |
+
+### Tier 2 — Import & Runtime
+
+| What | Command | Expected |
+|------|---------|----------|
+| Module imports | `python -c "from module import func"` | exit 0 |
+| Object instantiates | `python -c "from module import X; X()"` | exit 0 |
+| Function callable | `python -c "from module import f; assert callable(f)"` | exit 0 |
+
+### Tier 3 — Behavioral (MUST criteria)
+
+| What | Command | Expected |
+|------|---------|----------|
+| Function returns expected type | `python -c "from m import f; r=f(); assert isinstance(r, dict)"` | exit 0 |
+| Error captured in state | `python -c "from m import Node; s={'errors':[]}; Node(s); assert s['errors']"` | exit 0 |
+| Output matches expected | `python -c "from m import f; assert f(x)==expected"` | exit 0 |
+
+### Tier 4 — Integration
+
+| What | Command | Expected |
+|------|---------|----------|
+| Graph builds | `python -c "from m import build_graph; g=build_graph(); assert 'node' in g.nodes"` | exit 0 |
+| Graph invokes | `python -c "from m import build_graph; g=build_graph(); g.invoke(state)"` | no exception |
+| Smoke test with mock | `python -c "from m import run; result=run(mock_state); assert 'output' in result"` | exit 0 |
+
+### Validation Tier Rules
+
+1. **MUST criterion** → Tier 3 minimum (behavioral)
+2. **SHOULD criterion** → Tier 2 minimum (import/runtime)
+3. **NICE criterion** → Tier 1 acceptable (syntax only)
+4. If a criterion cannot be tested with a command → **rewrite the criterion** until it can
+
+### Writing Good Validation Commands
+
+| Good ✅ | Bad ❌ |
+|--------|--------|
+| `python -c "from m import f; r=f(); assert r['ok']"` | `python -m py_compile m.py` (only tests syntax) |
+| `python -c "g=build_graph(); assert 'node' in g.nodes"` | `grep "def build_graph" m.py` (only checks existence) |
+| `python -c "Node(state); assert state['errors']"` | "Error handling exists" (not testable) |
+
+### Validation Command Template
+
+For each criterion, write this:
+
+```
+## [Criterion name]
+- **Tier:** [1/2/3/4]
+- **Command:** [exact command to run]
+- **Expected:** [exact output or behavior]
+- **Pass condition:** [binary yes/no]
+```
 
 ---
 

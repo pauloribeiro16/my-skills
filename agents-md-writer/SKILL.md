@@ -16,7 +16,7 @@ Write effective AGENTS.md files: "README for machines" with structured technical
 
 ## Hard Rules
 
-1. **Root AGENTS.md must be <150 lines.** If larger → split into subdirectory files.
+1. **All AGENTS.md files must be ≤150 lines.** Root and sub-files share the same limit. If larger → condense or split.
 2. **Six core areas** every AGENTS.md must cover: Commands, Testing, Structure, Style, Git, Boundaries.
 3. **Never include secrets.** Reference where they live, not the values.
 4. **Commands must be copy-pasteable.** Exact commands with flags, not "run the tests."
@@ -53,58 +53,54 @@ description, call `skill({ name: "skill-name" })` to load its instructions.
 
 Separate global skills from project-local skills when both exist.
 
-## When to Suggest Hierarchical Splitting
+## Evaluation Guidelines
 
-Suggest splitting into subdirectory AGENTS.md files when **any** of these are true:
+Before making changes to an AGENTS.md file, evaluate its current state:
 
-| Trigger | Action |
-|---------|--------|
-| Root AGENTS.md exceeds 150 lines | Split largest section into subdirectory file |
-| Monorepo with distinct tech stacks | One AGENTS.md per component (backend/, frontend/, infra/) |
-| Single domain exceeds 80 lines | Extract to subdirectory AGENTS.md |
-| 3+ distinct environments (dev/staging/prod) | Separate infrastructure/AGENTS.md |
-| Root has >6 sections | Move domain-specific sections down |
+1. **Structure Type**: Determine if it's hierarchical or simple
+2. **Consistency Check**: Identify patterns to maintain
+3. **Change Impact**: Assess what needs to be preserved
 
-### Hierarchical Pattern
+### Hierarchical vs Simple
 
-OpenAI's main repository uses **88 AGENTS.md files** across subcomponents.
+| Aspect | Hierarchical | Simple |
+|--------|--------------|--------|
+| Size | ≤150 lines per file | ≤150 lines |
+| Scope | Multiple domains | Single domain |
+| Organization | Split into sub-AGENTS.md | Single file |
+| Use Case | Complex projects | Simple projects |
 
-```
-project/
-├── AGENTS.md              # Org-wide: commands, style, boundaries (<150 lines)
-├── backend/
-│   └── AGENTS.md         # Python/FastAPI specific (<100 lines)
-├── frontend/
-│   └── AGENTS.md         # React/TypeScript specific (<100 lines)
-└── infrastructure/
-    └── AGENTS.md         # Terraform/AWS specific (<100 lines)
-```
+### Evaluation Process
 
-Rules:
-- **Nearest file wins.** Subdirectory AGENTS.md overrides root for that path.
-- **Root stays general.** Commands, style, boundaries, git workflow.
-- **Sub-files are domain-specific.** Tech stack details, patterns, examples.
-- **No duplication.** If root has it, sub-file doesn't repeat it.
-- **Link, don't copy.** Use `See docs/api.md for API reference` instead of pasting.
+1. Read the entire AGENTS.md file
+2. Check line count and structure
+3. Identify existing patterns and conventions
+4. Determine if changes should maintain hierarchy or simplify
+5. Note sections that should be preserved or updated
 
-## Three-Tier Boundaries
+## Maintaining Hierarchical Consistency
 
-Every AGENTS.md must include:
+When working with hierarchical AGENTS.md structures:
 
-```markdown
-## Boundaries
+1. **Root File**: Keep general rules, commands, and boundaries
+2. **Sub-files**: Maintain domain-specific content
+3. **Links**: Use cross-references between files
+4. **Avoid Duplication**: Ensure information isn't repeated across files
+5. **Size Limits**: All files ≤150 lines (root and sub-files share the same limit)
 
-- **Always:** [safe operations the agent does without asking]
-- **Ask first:** [risky operations requiring user approval]
-- **Never:** [destructive operations the agent must never do]
-```
+### Transition Guidelines
 
-Common "Never" items:
-- Commit secrets, API keys, or credentials
-- Edit vendor/generated directories
-- Hardcode URLs, regions, or table names
-- Delete tests because they fail
-- Modify production configs without approval
+When converting between hierarchical and simple structures:
+
+1. **Hierarchical to Simple**:
+   - Consolidate content from sub-files
+   - Remove redundant information
+   - Maintain all critical sections
+
+2. **Simple to Hierarchical**:
+   - Identify logical domains for splitting
+   - Create appropriate sub-files
+   - Maintain root file with general rules
 
 ## Writing Style for AGENTS.md
 
@@ -114,20 +110,22 @@ Common "Never" items:
 - **Think like onboarding:** What would a new teammate need for their first PR?
 - **Iterate:** Update when the agent makes the same mistake twice
 
-## Workflow
+## Updated Workflow
 
 ```
-1. ANALYZE    → Detect build system, test framework, package manager, tech stack
-2. WRITE      → Commands first, then structure, style, boundaries
-3. CHECK SIZE → If >150 lines → suggest hierarchical split (see triggers above)
-4. VALIDATE   → Can an agent setup, test, build, deploy from this file alone?
+1. EVALUATE → Assess current AGENTS.md structure and content
+2. ANALYZE → Detect build system, test framework, package manager, tech stack
+3. PLAN → Determine changes needed while preserving existing patterns
+4. WRITE → Commands first, then structure, style, boundaries
+5. CHECK SIZE → If >150 lines → condense or split
+6. VALIDATE → Can an agent setup, test, build, deploy from this file alone?
 ```
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---------|-----|
-| Too verbose (>150 lines) | Split into subdirectory files |
+| Too verbose (>150 lines) | Condense or split into subdirectory files |
 | Vague commands | Use exact commands: `pytest tests/unit/` not "run tests" |
 | No boundaries | Add Always/Ask/Never section |
 | Including secrets | Reference location, never the value |
@@ -146,5 +144,5 @@ Common "Never" items:
 ## Quick Reference
 
 ```
-AGENTS.md = Commands + Structure + Style + Testing + Git + Boundaries. Root <150 lines. Commands first. Show examples. Never secrets. Split when >150 lines or monorepo. Nearest file wins.
+AGENTS.md = Commands + Structure + Style + Testing + Git + Boundaries. All files ≤150 lines. Commands first. Show examples. Never secrets. Split when >150 lines or monorepo. Nearest file wins.
 ```

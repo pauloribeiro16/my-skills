@@ -29,7 +29,6 @@ Skills para criação de conteúdo visual e design.
 | Skill | Descrição |
 |-------|-----------|
 | **`algorithmic-art`** | Arte algorítmica — padrões, fractais, visualizações generativas |
-| **`canvas-design`** | Design de canvas para web e aplicações |
 | **`frontend-design`** | Design de interfaces web — layouts, componentes, estilos |
 | **`theme-factory`** | Criar temas personalizados — paletas de cores, tipografia, componentes |
 | **`slack-gif-creator`** | Criar GIFs otimizados para Slack e outras plataformas |
@@ -43,7 +42,6 @@ Skills para programação e ferramentas de desenvolvimento.
 
 | Skill | Descrição |
 |-------|-----------|
-| **`claude-api`** | Usar a API do Claude — autenticação, prompts, streaming, function calling |
 | **`mcp-builder`** | Construir servidores MCP (Model Context Protocol) |
 | **`web-artifacts-builder`** | Construir web artifacts — componentes HTML/CSS/JS interativos |
 | **`webapp-testing`** | Testar aplicações web — testes de UI, API, performance |
@@ -70,8 +68,12 @@ Skills originais para OpenCode.
 | **`feature-dev`** | Workflow de 7 fases para desenvolvimento de funcionalidades (Discovery, Exploration, Clarification, Design, Implementation, Review, Summary) |
 | **`code-review`** | Code review automatizado com scoring de confiança (0-100) e múltiplos agentes |
 | **`commit-workflow`** | Automatização de git — commits, push, criação de PRs, limpeza de branches |
-| **`sprint-orchestrator`** | Orquestração de sprints complexos com múltiplos subagentes e quality gates |
+| **`sprint-contract`** | Contratos de implementação com validation tiers (T1-T4), pass@k trials, e phased decomposition |
 | **`agents-md-writer`** | Escrever ficheiros AGENTS.md e CLAUDE.md para projetos |
+| **`context-checkpoint`** | Checkpoint de contexto para sessões longas (>70% context window) |
+| **`etl-runner`** | Execução de ETL com fases sequenciais, tenant isolation e verificação de dados |
+| **`eval-runner`** | Avaliação progressiva de tarefas (1→3→5), gestão de trials e timeouts |
+| **`service-verify`** | Verificação de configurações de serviços — deteção de endpoints hardcoded |
 
 ---
 

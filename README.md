@@ -46,6 +46,8 @@ Skills para programação e ferramentas de desenvolvimento.
 | **`web-artifacts-builder`** | Construir web artifacts — componentes HTML/CSS/JS interativos |
 | **`webapp-testing`** | Testar aplicações web — testes de UI, API, performance |
 | **`skill-creator`** | Criar novas skills — estrutura, validação, melhores práticas |
+| **`codebase-architecture`** | Análise e melhoria de arquitetura de codebase — deepening, modularização, seams |
+| **`python-best-practices`** | Boas práticas Python moderno — PEP 8, type hints, testes, tooling |
 
 ---
 

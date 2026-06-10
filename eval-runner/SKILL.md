@@ -1,16 +1,16 @@
 ---
 name: eval-runner
-description: "Use when running evaluation tasks. Ensures progressive eval (1 task -> 2-3 -> max 5), proper trial count, and correct result interpretation. Prevents timeout issues with large batches."
+description: "Use when running evaluation tasks. Ensures progressive eval (1 task → 2-3 → max 5), proper trial count, and correct result interpretation. Prevents timeout issues with large batches."
 ---
 
 # Eval Runner Skill
 
-Runs evaluation tasks correctly using progressive batching. Prevents timeout issues.
+Runs evaluation tasks correctly using progressive batching. Prevents Ollama/Minimax timeout issues.
 
 ## When to Activate
 
 - Running any evaluation task
-- Before executing the eval harness
+- Before executing `run_eval.py`
 - When checking eval results
 - When troubleshooting low scores
 
@@ -29,8 +29,8 @@ Runs evaluation tasks correctly using progressive batching. Prevents timeout iss
 
 ### Single Task (always start here)
 ```bash
-PYTHONPATH=. python [eval_script] \
-  --config [config_path] \
+PYTHONPATH=. python core/eval/run_eval.py \
+  --case [case_path] \
   --task T001 \
   --trials 1 \
   --verbose
@@ -38,16 +38,17 @@ PYTHONPATH=. python [eval_script] \
 
 ### Small Batch (2-5 tasks)
 ```bash
-PYTHONPATH=. python [eval_script] \
-  --config [config_path] \
+PYTHONPATH=. python core/eval/run_eval.py \
+  --case [case_path] \
   --trials 1 \
   --verbose
 ```
+Remove `--task` flag to run all tasks in task_bank.yaml
 
 ### Single Task with Specific ID
 ```bash
-PYTHONPATH=. python [eval_script] \
-  --config [config_path] \
+PYTHONPATH=. python core/eval/run_eval.py \
+  --case [case_path] \
   --task T017 \
   --trials 1 \
   --verbose
@@ -57,27 +58,27 @@ PYTHONPATH=. python [eval_script] \
 
 ```bash
 # Activate venv
-source [path/to/venv]/bin/activate
+source /path/to/venv/bin/activate
 
 # Set PYTHONPATH
 export PYTHONPATH=.
 
-# Verify config
-cat [config_path] | grep -E "connection|model"
+# Verify case config
+cat [case_path]/case.yaml | grep -E "neo4j|ollama"
 ```
 
 ## Understanding Results
 
 | Score | Meaning | Action |
 |-------|---------|--------|
-| 0.0 | No data loaded OR wrong config | Check data, check connection |
+| 0.0 | No data loaded OR wrong ports | Check ETL, check ports |
 | 0.5-0.7 | Partial match | Review expected vs actual |
 | 0.8-1.0 | Good match | Task passed |
 | timeout | Model not responding | Reduce batch size |
 
 ## Evaluation Flow
 
-1. **Pre-check**: Verify data loading succeeded
+1. **Pre-check**: Verify ETL ran successfully
 2. **Run single task**: `T001 --trials 1`
 3. **If pass**: Run 2-3 more tasks
 4. **If still passing**: Run up to 5
@@ -96,17 +97,17 @@ cat [config_path] | grep -E "connection|model"
 
 | Symptom | Check |
 |---------|-------|
-| All scores 0.0 | Data loaded? Connection working? |
+| All scores 0.0 | ETL ran? Data in Neo4j? |
 | Some scores 0.0 | Specific tasks failing? |
 | Timeout | Batch too large? Model overloaded? |
-| Wrong answers | Config path correct? Dataset property set? |
+| Wrong answers | case_path correct? case property set? |
 
 ## Output Format
 
 ```
 ## Eval Results
 
-**Config:** [config_name]
+**Case:** [case_name]
 **Tasks run:** [N]
 **Passed:** [M]
 **Failed:** [K]

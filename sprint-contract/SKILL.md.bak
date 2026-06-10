@@ -1,6 +1,6 @@
 ---
 name: sprint-contract
-description: "Use before any implementation with 3+ file changes or complex tasks. Creates structured contracts with done criteria, validation commands, and quality dimensions. Supports phased goal decomposition. Trigger: implement feature, run sprint, execute contract, develop feature, create a contract"
+description: "Create structured implementation contracts before coding features with 3+ file changes. Includes done criteria, validation tiers (T1-T4), and subagent dispatch. NOT for creating skills, writing docs, or design work. Trigger: implement this feature, code this task, execute sprint, run implementation contract, before coding this"
 ---
 
 # Sprint Contract Skill
@@ -9,12 +9,13 @@ Creates structured implementation contracts before coding. Based on Anthropic's 
 
 ## When to Activate
 
-- Tasks with 3+ file changes
-- Complex features requiring multiple steps
-- Large goals that may need phased decomposition
-- When you need verifiable implementation criteria
-- Any implementation that needs validation
-- When unsure about scope or acceptance criteria
+- Tasks with 3+ file changes in code
+- Complex features requiring multiple implementation steps
+- Large coding goals needing phased decomposition
+- When you need verifiable implementation criteria with validation commands
+- Any code implementation that needs validation
+
+**Do NOT activate for:** creating skills, writing documentation, design mockups, research tasks, project setup, or dependency updates. Those have their own skills.
 
 ## What It Covers
 
@@ -49,36 +50,13 @@ Full reference: `references/trials-and-passk.md`
 CONTRACT → APPROVE → EXECUTE (Executor) → VALIDATE (code-reviewer) → COMMIT
 ```
 
-### Step 0 — Pre-Flight (Planner, BEFORE writing contract)
-
-**MANDATORY:** Read `execution/LESSONS.md` before starting any sprint. This file contains:
-- Model reliability guide (which model for which task)
-- Token waste anti-patterns (subagent explosion, context loops)
-- Bottleneck files (frequently-read files to avoid)
-- Edit tool discipline (re-read before edit)
-- Recurring debugging themes (RAG, Langfuse, Neo4j)
-
-Then activate the `project-conventions` skill (AEGIS-KG specific rules) before writing the contract. The contract MUST include the "Convention Compliance" section from the updated template.
-
-### Step 1 — Contract Creation (Planner)
-
-1. Planner writes CONTRACT.md (from template, including Convention Compliance section)
+1. Planner writes CONTRACT.md (from template)
 2. User approves (max 3 negotiation rounds)
 3. **LAUNCH Executor subagent** — `task(subagent_type="general")`
 4. **LAUNCH code-reviewer subagent** — `task(subagent_type="general")`
 5. If FAIL → Executor fixes → code-reviewer re-checks (max 3 cycles)
 6. **COMMIT validated sprint** — Planner does this, not Executor
 7. After all PASS → update Quality Log
-
-### Step 1.5 — Executor Pre-Implementation (MANDATORY)
-
-**Before Executor writes any code, it MUST:**
-1. Read `execution/LESSONS.md` (especially §3 Bottleneck Files and §4 Edit Tool Discipline)
-2. Activate the `project-conventions` skill
-3. Re-read all target files within the last 3 tool calls (per LESSONS §4)
-4. Run the convention validation commands to establish baseline
-
-If the Executor skips this, the code-reviewer MUST reject the work.
 
 **Rule: Planner NEVER implements. Planner NEVER verifies. Planner only delegates.**
 
@@ -105,10 +83,6 @@ Full reference: `references/validation-tiers.md`
 | Never Self-Verify | Always dispatch code-reviewer |
 | Commit After Sprint | `git add + commit` before next sprint |
 | Tier Enforcement | MUST requires T3+ validation |
-| **Read LESSONS.md First** | Both Planner and Executor MUST read `execution/LESSONS.md` before starting |
-| **Activate project-conventions** | Both Executor and code-reviewer MUST activate the project conventions skill |
-| **Convention Compliance** | Every contract MUST include the Convention Compliance section |
-| **Re-Read Before Edit** | Executor MUST re-read target files within last 3 tool calls before editing |
 | Validation Required | No criterion without command |
 
 ## Quality Tracking

@@ -44,8 +44,8 @@ Next action: [what to do next]
 ## Context Summary
 - Working on: [what this part does]
 - Key files: [list]
-- Project: [project_name]
-- Current service/DB: [if applicable]
+- Neo4j ports: 7688/7475 (if applicable)
+- Current case: [case name if applicable]
 
 ## Handoff Notes
 - Don't restart from scratch — read SESSION_STATE.md first

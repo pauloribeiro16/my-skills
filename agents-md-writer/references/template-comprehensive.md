@@ -177,24 +177,24 @@ class UserDict(TypedDict):
 
 async def get_user(user_id: str) -> UserDict:
     """Fetch user by ID.
-    
+
     Args:
         user_id: UUID string
-        
+
     Returns:
         User dictionary
-        
+
     Raises:
         ValueError: If user_id is empty
         NotFoundError: If user doesn't exist
     """
     if not user_id:
         raise ValueError("user_id is required")
-    
+
     user = await user_repo.get(user_id)
     if not user:
         raise NotFoundError(f"User {user_id} not found")
-    
+
     return {"id": user.id, "email": user.email}
 
 # Bad — no types, no docs, poor error handling
@@ -343,15 +343,15 @@ def user_service():
 
 async def test_get_user_found(user_service):
     mock_repo.get.return_value = MockUser(id="1", email="test@example.com")
-    
+
     user = await user_service.get_user("1")
-    
+
     assert user["id"] == "1"
     assert user["email"] == "test@example.com"
 
 async def test_get_user_not_found(user_service):
     mock_repo.get.return_value = None
-    
+
     with pytest.raises(NotFoundError):
         await user_service.get_user("999")
 ```

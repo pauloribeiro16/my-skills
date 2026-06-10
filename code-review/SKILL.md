@@ -34,9 +34,32 @@ Automated code review using multiple specialized agents with confidence-based sc
 
 | Agent | Purpose | Focus |
 |-------|---------|-------|
-| CLAUDE.md compliance ×2 | Verify guideline adherence | Two agents for redundancy |
+| AGENTS.md compliance ×2 | Verify guideline adherence | Two agents for redundancy |
+| **Convention compliance** | Verify `project-conventions` skill rules | Naming, structure, error handling, ports |
 | Bug detection | Scan for obvious bugs | Changes only, not pre-existing |
 | Historical context | Git blame analysis | Context from git history |
+
+## Convention Compliance Check (AEGIS-KG specific)
+
+**Before scoring confidence**, run the convention validation commands from `.opencode/skills/project-conventions/SKILL.md` §13. The following are **HARD BLOCKERS** (automatic FAIL):
+
+| Check | Command | Threshold |
+|-------|---------|-----------|
+| Hardcoded wrong ports | `grep -rn "7474\|7687" core/ cases/` | 0 matches |
+| Bare `except: pass` | `ruff check --select SIM105,SIM110` | 0 errors |
+| Old-style type hints | `ruff check --select UP006,UP007` | 0 errors |
+| Missing logger in module | `grep -L "logger = logging.getLogger(__name__)"` on files with functions | 0 files |
+| Neo4j nodes without `case` property | Code review of new Cypher | 0 nodes |
+| Naming convention violations | `ruff check --select N801,N802,N803` | 0 errors |
+| Hardcoded credentials | `grep -rn "d3fendtest" core/ cases/` | 0 matches in active code |
+
+**Soft warnings** (lower confidence, do not block):
+- Missing docstrings on public functions
+- Mutable default arguments
+- Functions >50 lines
+- Files >500 lines
+
+**If ANY hard blocker is found**, the review verdict is **FAIL** regardless of confidence scores.
 
 ## Confidence Scoring
 
@@ -83,8 +106,34 @@ Issues **not reported** (below threshold):
 - Code that looks like a bug but isn't
 - Pedantic nitpicks
 - Issues linters will catch
-- General quality issues (unless in AGENTS.md)
+- General quality issues (unless in AGENTS.md or project-conventions skill)
 - Issues with lint ignore comments
+
+## Mandatory Pre-Review Checklist
+
+Before running the code review, ALWAYS execute:
+
+```bash
+cd "/home/epmq-cyber/Área de Trabalho/projects/aegis-kg"
+
+echo "=== HARD BLOCKER 1: Wrong ports ===" && \
+result=$(grep -rn "7474\|7687" core/ cases/ 2>/dev/null | grep -v "archive\|AGENTS\|README\|example" || true) && \
+if [ -z "$result" ]; then echo "OK"; else echo "FAIL: $result"; fi
+
+echo "=== HARD BLOCKER 2: Bare except: pass ===" && \
+python3 -m ruff check core/ --select SIM105,SIM110
+
+echo "=== HARD BLOCKER 3: Old-style type hints ===" && \
+python3 -m ruff check core/ --select UP006,UP007
+
+echo "=== HARD BLOCKER 4: Hardcoded credentials ===" && \
+grep -rn "d3fendtest" core/ cases/ 2>/dev/null | grep -v "archive\|defaults.py\|test_" | head
+
+echo "=== HARD BLOCKER 5: Naming conventions ===" && \
+python3 -m ruff check core/ --select N801,N802,N803
+```
+
+If ANY of these returns errors, the review is **automatic FAIL** with the specific blocker cited.
 
 ## Usage
 

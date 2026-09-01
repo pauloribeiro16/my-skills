@@ -3,16 +3,55 @@ name: codebase-architecture
 description: "Expert guidance for codebase architecture: refactoring, modular boundaries, clean architecture, deep modules. Use when improving code structure or evaluating tech debt."
 ---
 
-# Codebase Architecture
+Surface architectural friction and propose **deepening opportunities** — refactors that turn shallow modules into deep ones. The aim is testability, maintainability, and navigability.
 
-Surface architectural friction and propose **deepening opportunities** -- refactors that turn shallow modules into deep ones. The aim is testability, maintainability, and AI-navigability.
+## When to Use
+
+- A module's interface is nearly as complex as its implementation (shallow).
+- Understanding one concept requires bouncing between many small modules.
+- Pure functions were extracted "for testability" but the real bugs hide in callers.
+- Tightly-coupled modules leak across their seams.
+- Tech debt is accumulating and you need a structured pass.
+
+## When NOT to Use
+
+- Trivial renames or single-line cleanups — just edit.
+- The user has a specific design in mind and only wants implementation → `feature-dev`.
+- Bug-hunting, not structure → diagnose first with the project's tooling.
+- Greenfield design where no module exists yet — wait until something is concrete.
+
+## Hard Rules
+
+1. **Depth is a property of the interface, not the implementation** — a deep module hides complexity behind a small interface; a shallow one has an interface nearly as complex as its implementation.
+2. **Apply the deletion test to suspected shallow modules** — if complexity vanishes when you delete it, the module was a pass-through; if complexity reappears across N callers, it was earning its keep.
+3. **The interface is the test surface** — if you need to test *past* the interface, the module is probably the wrong shape.
+4. **Wait for two adapters before introducing a port** — one adapter is hypothetical seam; two (typically production + test) is real seam. Indirection without justification is overhead.
+5. **Use the project's vocabulary exactly** — call a "module" a "module", not a "component" or "service" — because consistent language is the whole point of a glossary.
+6. **Record load-bearing rejections as ADRs** — when the user rejects a candidate with a non-obvious reason, write an ADR so future reviews do not re-suggest it.
+7. **Propose candidates first, design interfaces after the user picks one** — proposing interfaces too early is the most common pitfall.
+
+## Examples
+
+Candidate card format (one per deepening):
+
+```
+Title:      <short name>
+Files:      <which files/modules>
+Problem:    <why the current architecture causes friction>
+Solution:   <what changes, in plain English>
+Benefits:   <locality, leverage>
+Before/After: <visual diagram>
+Strength:   Strong / Worth exploring / Speculative
+```
+
+Top recommendation goes at the end.
 
 ## Quick Start
 
-1. Read the project's domain glossary and any ADRs first
-2. Explore the codebase noting friction points (see [Process](#process) below)
-3. Present candidates as a structured report
-4. Enter the **grilling loop** with the user to refine
+1. Read the project's domain glossary and any ADRs first.
+2. Explore the codebase noting friction points (see Process below).
+3. Present candidates as a structured report.
+4. Enter the **grilling loop** with the user to refine.
 
 ## Core Principles
 
@@ -32,7 +71,7 @@ Read the project's domain glossary (`CONTEXT.md`, glossary files) and any ADRs i
 Walk the codebase and note where you experience friction:
 
 - Where does understanding one concept require bouncing between many small modules?
-- Where are modules **shallow** -- interface nearly as complex as the implementation?
+- Where are modules **shallow** — interface nearly as complex as the implementation?
 - Where have pure functions been extracted just for testability, but the real bugs hide in how they're called (no **locality**)?
 - Where do tightly-coupled modules leak across their seams?
 - Which parts are untested or hard to test through their current interface?
@@ -41,17 +80,7 @@ Apply the **deletion test** to anything you suspect is shallow.
 
 ### 3. Report
 
-Present candidates in a structured format (one per card):
-
-- **Title** -- short name for the deepening
-- **Files** -- which files/modules are involved
-- **Problem** -- why the current architecture causes friction
-- **Solution** -- what changes, in plain English
-- **Benefits** -- in terms of **locality** and **leverage**
-- **Before / After** -- visual diagram of the change
-- **Recommendation strength** -- Strong / Worth exploring / Speculative
-
-End with a **Top recommendation** section.
+Present candidates using the card format above. End with a **Top recommendation** section.
 
 ### 4. Grilling Loop
 
@@ -73,10 +102,3 @@ Load these files when you reach the relevant stage:
 | `references/LANGUAGE.md` | Before making any suggestion. Contains the precise vocabulary (Module, Seam, Depth, Leverage, Locality). Use these terms exactly. |
 | `references/DEEPENING.md` | When evaluating a deepening candidate. Classifies dependencies and guides testing strategy. |
 | `references/INTERFACE-DESIGN.md` | When the user wants to explore alternative interfaces. Spawns parallel sub-agents with different design constraints. |
-
-## Common Pitfalls
-
-- **Proposing interfaces too early.** Explore and present candidates first. Only design interfaces after the user picks a candidate.
-- **Using wrong vocabulary.** Don't say "component" or "service" when you mean "module." Consistent language is the whole point.
-- **Introducing ports for single adapters.** A seam with one adapter is just indirection. Wait for a second adapter to justify it.
-- **Over-engineering.** Not every shallow module needs deepening. Focus on modules where shallowness causes measurable friction.

@@ -98,6 +98,61 @@ run `examples/download-models.sbatch` (a separate sbatch job on
 `normal-a100-40`). Do NOT `ollama pull` inside AEGIS-KG jobs — compute
 nodes have spotty egress to `registry.ollama.ai`.
 
+### Ollama version split (2026-09-01, battle-tested)
+
+There are **two Ollama binaries** on the cluster and they are NOT
+interchangeable:
+
+| Binary | Version | Use for |
+|--------|---------|---------|
+| `$BD/bin/ollama` (`$BD` = `/projects/F202512235CPCAA1/CyberMetric_Deucalion`) | **0.31.1** | `ollama serve` for models whose architecture it knows (gemma3/gemma4, qwen3.x, llama, mistral, phi, granite4.2) |
+| `/projects/F202512235CPCAA1/graphify-methodology/bin/ollama` (+ `lib/ollama` in `LD_LIBRARY_PATH`) | **0.32.13** | `ollama pull` of NEW model tags (0.31.1 cannot resolve modern manifests — `granite4.2:30b` fails, `granite4.2:30b` vs `granite4:30b` matters) AND `serve` for models whose renderer/arch it doesn't know (muse-glimmer → `unknown model architecture` under 0.31.1) |
+
+**Pull recipe (login node, spotty egress):** serve 0.32.13 locally, pull
+one model at a time with `timeout 600`, verify the manifest appeared
+under `ollama_data/models/manifests/registry.ollama.ai/library/<model>/`.
+Exact tag names matter — check the Ollama library page first
+(`granite4.2:30b` exists; `granite4:30b` does not; `nemotron-3.5-lightning:30b`,
+`muse-glimmer:30b|latest`, `ornith:9b` all pulled successfully 2026-09-01).
+
+## AEGIS Phase 1 scout recipe (2026-09-01, battle-tested)
+
+The aegis-phase1 project runs model scouts (Phase 1B only: 4 LLM calls)
+on `dev-a100-80`. Use the generic sbatch
+`aegis-phase1/examples/deucalion/scout-bench-m-aegis.sbatch` — pass the
+model as a **positional argument**, never via `--export` (flaky):
+
+```bash
+# from the aegis-phase1 dir on the login node:
+sbatch examples/deucalion/scout-bench-m-aegis.sbatch granite4.2:30b
+```
+
+Rules encoded in that sbatch (do not relearn the hard way):
+
+1. **Sequential, never parallel.** One Ollama per node. Three 30B scouts
+   in parallel → `Connection refused` / `Server disconnected` on all of
+   them. Submit, wait for SUCCESS, then submit the next.
+2. **Logs to NFS**, not compute-node scratch: `--out/--err` point to
+   `$PROJ/slurm-scout-bench-m-<JOBID>.{out,err}` and a run log to
+   `$PROJ/logs/scout_runs/scout_<model>_<JOBID>.log`. Scratch logs are
+   unrecoverable after the job ends.
+3. **Warm-up with retries before python.** 5 attempts, 180s timeout each;
+   abort before wasting the pipeline run if the model won't load.
+4. **Walltime:** budget ≥2× the slowest previous scout (qwen3.8 = 18 min,
+   ornith:9b = 5:36, 30B models ≈ 15-25 min). 30 min is the working
+   default for Phase 1B scouts on 1× A100-80.
+5. **Active project dir:**
+   `/projects/F202512235CPCAA1/CyberMetric_Deucalion/aegis-phase1`
+   (NOT `~/aegis-kg` — that is the old CORR-057 eval layout).
+6. **Monitor:** `squeue -u $USER` + `sacct -X -j <JOBID> -n -P -o
+   "JobID,State,ExitCode,Elapsed"`. Success = `STATUS: SUCCESS` in the
+   run log AND `rationale_by_reg has 2 entries` in stderr.
+7. **Post-run:** scp Doc 05 to the local mirror
+   `<workspace>/Deucalion/results/<model>_<jobid>/`, then evaluate:
+   `PYTHONPATH=src python3 scripts/eval/generate_report.py --run-dir
+   <mirror_dir> --preproc preproc_out --output-{dir,md,json} ... --use-parser-gate`
+   (see `execution/reports/EVAL_PROTOCOL.md` for the judge pass).
+
 ## Operational Cheat Sheet
 
 | Need | Command |
@@ -212,7 +267,7 @@ All site-specific values are real. No placeholders to substitute.
 | `<REPO_URL>` | (HTTPS clone fails) — use `tar+scp` | -- |
 | `<BRANCH>` | `main` | -- |
 
-**Last Updated:** 2026-06-09
+**Last Updated:** 2026-09-01
 
 ## Companion: Human-Oriented Workflow Doc
 

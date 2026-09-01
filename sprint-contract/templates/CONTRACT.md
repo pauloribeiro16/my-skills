@@ -1,5 +1,6 @@
 # CONTRACT — [Feature Name]
 
+**Contract ID:** SC-YYYY-NN
 **Date:** YYYY-MM-DD
 **Planner:** [name]
 **Status:** DRAFT → NEGOTIATING → APPROVED → IMPLEMENTING → VALIDATED
@@ -183,6 +184,7 @@ For each criterion, write this:
 - [ ] Executor implemented
 - [ ] code-reviewer verified
 - [ ] Quality Log updated (with pass@k results)
+- [ ] SESSION_STATE.md updated (if sprint >1 day)
 
 ---
 
@@ -195,7 +197,7 @@ For each criterion, write this:
 
 ### Commit Details
 - **Branch:** `master` or `sprint/nome-do-objetivo`
-- **Commit Message:** 
+- **Commit Message:**
   ```
   feat(scope): description — phase N/M [PASS: X%]
   ```

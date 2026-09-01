@@ -1,34 +1,61 @@
 ---
 name: agents-md-writer
-description: "Use when creating, updating, or improving AGENTS.md files. Trigger phrases: write agents.md, update agents.md, create onboarding file, improve agent instructions, write CLAUDE.md, project onboarding"
+description: "Use when creating, updating, or improving AGENTS.md files. Trigger phrases: write agents.md, update agents.md, create onboarding file, improve agent instructions, write CLAUDE.md, project onboarding."
 ---
 
-# AGENTS.md Writer
-
-Write effective AGENTS.md files: "README for machines" with structured technical guidance for AI coding agents. Based on analysis of 2,500+ repositories, OpenAI Codex, and GitHub Copilot best practices.
+Writes effective AGENTS.md files — a "README for machines" with structured technical guidance for AI coding agents. Based on analysis of 2,500+ repositories, OpenAI Codex, and GitHub Copilot best practices.
 
 ## When to Use
 
-- Creating a new AGENTS.md for a project
-- Updating or reviewing an existing AGENTS.md
-- Converting CLAUDE.md / .cursorrules / copilot-instructions.md to AGENTS.md
-- Splitting a large AGENTS.md into hierarchical sub-files
+- Creating a new AGENTS.md for a project.
+- Updating or reviewing an existing AGENTS.md.
+- Converting CLAUDE.md / .cursorrules / copilot-instructions.md to AGENTS.md.
+- Splitting a large AGENTS.md into hierarchical sub-files.
+- Auditing whether an AGENTS.md is current (commands still work, structure still matches).
+
+## When NOT to Use
+
+- Human-facing project documentation → write a README.md, not AGENTS.md.
+- Skill authoring (SKILL.md files in `~/.zcode/skills/`) → `skill-creator` (the official plugin version).
+- Agent definition files (with `tools:`, `skills:`, `color:`) → they are a different schema.
 
 ## Hard Rules
 
-1. **Root AGENTS.md must be <150 lines.** If larger → split into subdirectory files.
+1. **All AGENTS.md files must be ≤150 lines.** Root and sub-files share the same limit. Larger → condense or split.
 2. **Six core areas** every AGENTS.md must cover: Commands, Testing, Structure, Style, Git, Boundaries.
 3. **Never include secrets.** Reference where they live, not the values.
 4. **Commands must be copy-pasteable.** Exact commands with flags, not "run the tests."
 5. **File-scoped commands first.** Full suite only as fallback.
 6. **Code examples over explanations.** One snippet beats three paragraphs.
-7. **Skills activation**: Document how skills are loaded.
-8. **Complements README.md**: AGENTS.md is for machines; don't duplicate human-oriented content.
+7. **Document how skills are activated** in a dedicated section, because agents need to know how to load them.
+8. **Complements README.md**: AGENTS.md is for machines; do not duplicate human-oriented content.
+9. **Treat AGENTS.md as code**, not documentation: update on PR, audit quarterly, update immediately when commands/structure change, and update when the agent makes the same mistake twice.
+
+## Examples
+
+Good vs. vague command:
+
+```bash
+# Good — file-scoped, exact flags
+pnpm vitest run src/lib/format.test.js
+
+# Vague — agent has to guess
+"run the tests"
+```
+
+Good vs. bad Boundaries:
+
+```markdown
+## Boundaries
+- **Always:** Run tests before finishing, write scratch files to tmp/
+- **Ask first:** Adding dependencies, modifying package.json
+- **Never:** git commit, git push, create files outside the defined structure
+```
 
 ## Six Core Areas
 
 | Priority | Area | What to Include |
-|----------|------|-----------------|
+|----------|------|----------------|
 | 1 | **Commands** | Setup, file-scoped tests/lint, full suite. Exact with flags. |
 | 2 | **Testing** | Framework, how to run single file + full suite, coverage target. |
 | 3 | **Project Structure** | Key directories with one-line descriptions. |
@@ -53,81 +80,87 @@ description, call `skill({ name: "skill-name" })` to load its instructions.
 
 Separate global skills from project-local skills when both exist.
 
-## When to Suggest Hierarchical Splitting
+## Workflow
 
-Suggest splitting into subdirectory AGENTS.md files when **any** of these are true:
+### 1. Evaluate
 
-| Trigger | Action |
-|---------|--------|
-| Root AGENTS.md exceeds 150 lines | Split largest section into subdirectory file |
-| Monorepo with distinct tech stacks | One AGENTS.md per component (backend/, frontend/, infra/) |
-| Single domain exceeds 80 lines | Extract to subdirectory AGENTS.md |
-| 3+ distinct environments (dev/staging/prod) | Separate infrastructure/AGENTS.md |
-| Root has >6 sections | Move domain-specific sections down |
+Assess the current AGENTS.md structure and content: is it hierarchical or simple? What patterns exist? What must be preserved?
 
-### Hierarchical Pattern
+### 2. Analyze
 
-OpenAI's main repository uses **88 AGENTS.md files** across subcomponents.
+Detect build system, test framework, package manager, tech stack from `package.json`, lockfiles, folder structure, and any existing config.
 
-```
-project/
-├── AGENTS.md              # Org-wide: commands, style, boundaries (<150 lines)
-├── backend/
-│   └── AGENTS.md         # Python/FastAPI specific (<100 lines)
-├── frontend/
-│   └── AGENTS.md         # React/TypeScript specific (<100 lines)
-└── infrastructure/
-    └── AGENTS.md         # Terraform/AWS specific (<100 lines)
-```
+### 3. Plan
 
-Rules:
-- **Nearest file wins.** Subdirectory AGENTS.md overrides root for that path.
-- **Root stays general.** Commands, style, boundaries, git workflow.
-- **Sub-files are domain-specific.** Tech stack details, patterns, examples.
-- **No duplication.** If root has it, sub-file doesn't repeat it.
-- **Link, don't copy.** Use `See docs/api.md for API reference` instead of pasting.
+Determine changes needed while preserving existing patterns. Identify what goes in the root vs. sub-AGENTS.md.
 
-## Three-Tier Boundaries
+### 4. Write
 
-Every AGENTS.md must include:
+Commands first, then structure, style, boundaries. Keep the file lean.
 
-```markdown
-## Boundaries
+### 5. Check Size
 
-- **Always:** [safe operations the agent does without asking]
-- **Ask first:** [risky operations requiring user approval]
-- **Never:** [destructive operations the agent must never do]
-```
+If >150 lines → condense or split. Do not ship an oversized AGENTS.md.
 
-Common "Never" items:
-- Commit secrets, API keys, or credentials
-- Edit vendor/generated directories
-- Hardcode URLs, regions, or table names
-- Delete tests because they fail
-- Modify production configs without approval
+### 6. Validate
+
+Can an agent setup, test, build, and deploy from this file alone? If not, the file is incomplete.
+
+## Evaluation Guidelines
+
+Before making changes to an AGENTS.md file, evaluate its current state:
+
+1. **Structure Type**: Determine if it's hierarchical or simple.
+2. **Consistency Check**: Identify patterns to maintain.
+3. **Change Impact**: Assess what needs to be preserved.
+
+### Hierarchical vs Simple
+
+| Aspect | Hierarchical | Simple |
+|--------|--------------|--------|
+| Size | ≤150 lines per file | ≤150 lines |
+| Scope | Multiple domains | Single domain |
+| Organization | Split into sub-AGENTS.md | Single file |
+| Use Case | Complex projects | Simple projects |
+
+### Evaluation Process
+
+1. Read the entire AGENTS.md file.
+2. Check line count and structure.
+3. Identify existing patterns and conventions.
+4. Determine if changes should maintain hierarchy or simplify.
+5. Note sections that should be preserved or updated.
+
+## Maintaining Hierarchical Consistency
+
+When working with hierarchical AGENTS.md structures:
+
+1. **Root File**: Keep general rules, commands, and boundaries.
+2. **Sub-files**: Maintain domain-specific content.
+3. **Links**: Use cross-references between files.
+4. **Avoid Duplication**: Ensure information isn't repeated across files.
+5. **Size Limits**: All files ≤150 lines (root and sub-files share the same limit).
+
+### Transition Guidelines
+
+When converting between hierarchical and simple structures:
+
+1. **Hierarchical to Simple**: Consolidate content from sub-files; remove redundancy; preserve critical sections.
+2. **Simple to Hierarchical**: Identify logical domains; create sub-files; keep root file general.
 
 ## Writing Style for AGENTS.md
 
-- **Be specific:** "React 18 with TypeScript, Vite, Tailwind" not "React project"
-- **Show examples:** Good code vs bad code with concrete snippets
-- **Put commands early:** Setup and test commands before explanations
+- **Be specific:** "React 18 with TypeScript, Vite, Tailwind" not "React project".
+- **Show examples:** Good code vs. bad code with concrete snippets.
+- **Put commands early:** Setup and test commands before explanations.
 - **Think like onboarding:** What would a new teammate need for their first PR?
-- **Iterate:** Update when the agent makes the same mistake twice
-
-## Workflow
-
-```
-1. ANALYZE    → Detect build system, test framework, package manager, tech stack
-2. WRITE      → Commands first, then structure, style, boundaries
-3. CHECK SIZE → If >150 lines → suggest hierarchical split (see triggers above)
-4. VALIDATE   → Can an agent setup, test, build, deploy from this file alone?
-```
+- **Iterate:** Update when the agent makes the same mistake twice.
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---------|-----|
-| Too verbose (>150 lines) | Split into subdirectory files |
+| Too verbose (>150 lines) | Condense or split into subdirectory files |
 | Vague commands | Use exact commands: `pytest tests/unit/` not "run tests" |
 | No boundaries | Add Always/Ask/Never section |
 | Including secrets | Reference location, never the value |
@@ -137,14 +170,16 @@ Common "Never" items:
 
 ## References
 
-- `references/ecosystem.md` — Adoption, tool compatibility, parsing differences (Codex, Copilot, Cursor, Claude)
-- `references/patterns.md` — Codex workflow patterns, GitHub agent best practices, prompt structure, maintenance
-- `references/security.md` — Security deep dive, scanning tools, CI/CD gates, deployment validation
-- `references/template-minimal.md` — Simple project template (~85 lines)
-- `references/template-comprehensive.md` — Complex project template with tech patterns (~400 lines)
+- `references/ecosystem.md` — Adoption, tool compatibility, parsing differences (Codex, Copilot, Cursor, Claude).
+- `references/patterns.md` — Codex workflow patterns, GitHub agent best practices, prompt structure, maintenance.
+- `references/security.md` — Security deep dive, scanning tools, CI/CD gates, deployment validation.
+- `references/template-minimal.md` — Simple project template (~85 lines).
+- `references/template-comprehensive.md` — Complex project template with tech patterns (~400 lines).
 
 ## Quick Reference
 
 ```
-AGENTS.md = Commands + Structure + Style + Testing + Git + Boundaries. Root <150 lines. Commands first. Show examples. Never secrets. Split when >150 lines or monorepo. Nearest file wins.
+AGENTS.md = Commands + Structure + Style + Testing + Git + Boundaries.
+All files ≤150 lines. Commands first. Show examples. Never secrets.
+Split when >150 lines or monorepo. Nearest file wins.
 ```

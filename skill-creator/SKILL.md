@@ -3,238 +3,88 @@ name: skill-creator
 description: "Use when creating a new skill, improving skill descriptions, or organizing skill content. Trigger phrases: create a skill, add a skill to plugin, write a new skill, improve skill description, organize skill content."
 ---
 
-# Skill Creator
-
-Create high-quality skills that load reliably and provide deep knowledge on demand. Based on progressive disclosure principles.
+Creates, edits, and iterates on local ZCode skills. Aligned with the workspace AGENTS.md §10 convention: frontmatter uniforme, H2 esqueleto canónico, estilo imperativo + "why".
 
 ## When to Use
 
-- Creating a new skill for your project or globally
-- Improving an existing skill's description or structure
-- Organizing skill content across multiple files
-- Writing trigger phrases that reliably load the right skill
+- A new skill is needed for a repeated workflow.
+- An existing skill keeps triggering on the wrong prompts (description too broad or too narrow).
+- A skill is too long and needs splitting into SKILL.md + references/.
+- Reviewing or auditing existing skills against the AGENTS.md §10 convention.
 
-## Skill Structure
+## When NOT to Use
 
-Every skill lives in a directory with a `SKILL.md` file:
+- Documentation files in human prose (READMEs, ADRs) — those go through agents-md-writer if they need to be machine-readable too.
+- Updating plugin manifests (plugin.json, marketplace configs) — separate concern.
+- Generating throwaway scripts — write them to tmp/, not as a skill.
 
-```
-~/.config/opencode/skills/<name>/
-└── SKILL.md
-```
+## Hard Rules
 
-Or for project-local skills:
+1. **Follow the workspace AGENTS.md §10 convention** if one is defined. The local AGENTS.md §10 is the contract; deviations must be asked, not assumed. The convention is: frontmatter name (kebab-case, matches folder) + description (in double quotes) + license when LICENSE.txt exists; required H2 sections When to Use, When NOT to Use, Hard Rules (≤8 numbered, imperative with why), Examples (≥1 runnable code block); style imperative + why (avoid all-caps NEVER/MUST/CRITICAL).
+2. **Description is the trigger** — the model decides whether to load a skill by matching the description. Front-load the trigger wording in the first ~250 characters, because the description is truncated there.
+3. **Skills are progressive disclosure** — SKILL.md is the body the model reads first (target ≤150 lines, never above 500). Move detail to references/<topic>.md files and have SKILL.md tell the model when to read them.
+4. **Prefer references over long bodies** — if the body is getting past ~200 lines, split. Each reference is a self-contained file the model can read on demand.
+5. **Run the test prompts after writing** — a skill is not done until you have tried it on 2-3 realistic user prompts. "Looks right" is not verification.
+6. **Examples beat rules** — a literal example of the format or output is more useful than three paragraphs of explanation. Include ≥1 in the Examples section.
+7. **Frontmatter name must match the directory name** — if they differ, the skill is shadowed by another of the same name in the discovery order. The model sees the first one, not yours.
 
-```
-.opencode/skills/<name>/
-└── SKILL.md
-```
+## Examples
 
-## YAML Frontmatter
-
-`SKILL.md` must start with YAML frontmatter. Only these fields are recognized:
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Skill name (1-64 chars, lowercase alphanumeric + hyphens) |
-| `description` | Yes | 1-1024 chars. Specific enough for the agent to choose correctly |
-| `license` | No | License identifier |
-| `compatibility` | No | Compatibility tag |
-| `metadata` | No | String-to-string map for additional data |
-
-### Name Validation Rules
-
-- 1-64 characters
-- Lowercase alphanumeric with single hyphen separators
-- Cannot start or end with `-`
-- Cannot contain consecutive `--`
-- Must match the directory name
-
-### Example Frontmatter
-
-```yaml
----
-name: git-release
-description: Create consistent releases and changelogs
-license: MIT
-compatibility: opencode
-metadata:
-  audience: maintainers
-  workflow: github
----
-```
-
-## Progressive Disclosure
-
-Skills should use three-level disclosure:
-
-### Level 1: Metadata (Always Loaded)
-
-Concise `name` + `description` with strong trigger phrases. The agent sees this before deciding whether to load the skill.
-
-**Rule**: Keep descriptions under 1024 characters but specific enough to differentiate from similar skills.
-
-### Level 2: Core SKILL.md (On Demand)
-
-When the skill is loaded, provide essential reference content (~500-1500 words). Structure it with:
-
-- **When to use** section with specific trigger phrases
-- **What it covers** with numbered capabilities
-- **Resources** section listing references and examples
-- **Use when** closing statement
-
-### Level 3: References and Examples (As Needed)
-
-For detailed guides, patterns, and working code, organize in subdirectories:
-
-```
-skill-name/
-├── SKILL.md
-├── references/
-│   ├── patterns.md
-│   └── migration.md
-├── examples/
-│   └── basic-usage.sh
-└── scripts/
-    └── validate.sh
-```
-
-## Writing Strong Trigger Descriptions
-
-Trigger descriptions are the agent's primary way to decide whether to load a skill. Write descriptions that:
-
-### Do
-
-- Include specific phrases the agent will actually say
-- Mention the exact operation (not just the domain)
-- Reference the tool or API being used
-- Include edge cases or variations
-
-### Don't
-
-- Use generic descriptions like "code quality" or "helpful tips"
-- List every possible synonym
-- Make it sound like documentation rather than a skill
-
-### Examples
-
-| Weak | Strong |
-|------|--------|
-| "Git operations" | "Create commits, push branches, and manage git history. Trigger phrases: commit changes, push to remote, undo last commit, create branch" |
-| "Testing" | "Write and run tests for Python and JavaScript. Trigger phrases: write tests for, run test suite, add test coverage, mock a function" |
-| "Security" | "Find security vulnerabilities in code. Trigger phrases: scan for SQL injection, check for XSS, detect secrets in code" |
-
-## Writing Style
-
-### Voice and Tone
-
-- Use **third person** for descriptions: "This skill should be used when..."
-- Use **imperative or infinitive form** for instructions: "Add the field", "Configure the hook"
-- Keep sentences concise
-- Prefer active voice
-
-### Structure
-
-1. **Header** with skill name and one-line purpose
-2. **When to Use** with specific trigger phrases
-3. **What It Covers** with numbered capabilities
-4. **Resources** section (optional)
-5. **Use When** closing statement
-
-## Skill Content Organization
-
-### SKILL.md Template
+Minimal skill, following the §10 convention:
 
 ```markdown
 ---
-name: <skill-name>
-description: "<trigger phrases> and <operations>. Trigger phrases: <specific phrases>"
+name: my-skill
+description: "Use when X. Trigger phrases: x, y, z."
 ---
-
-# <Skill Name>
-
-<Brief purpose statement in one sentence>
 
 ## When to Use
 
-<Specific trigger phrases that reliably load this skill>
+- Bullet list of trigger contexts.
 
-## What It Covers
+## When NOT to Use
 
-1. <first capability>
-2. <second capability>
-3. <third capability>
+- What this skill is **not** for.
 
-## Resources
+## Hard Rules
 
-- Core SKILL.md (this file)
-- references/<reference-name>.md — <description>
-- examples/<example-name>.<ext> — <description>
+1. **First rule** — imperative + why.
+2. **Second rule** — imperative + why.
 
-## Use When
+## Examples
 
-<Closing statement with specific use cases>
+\`\`\`bash
+# A runnable example the model can copy.
+\`\`\`
 ```
 
-## Directory Naming
+Skill with progressive disclosure (body + references):
 
-Directory name must match `name` in frontmatter exactly (lowercase, hyphens).
-
+```text
+my-skill/
+├── SKILL.md              # ≤150 lines — essence + routing table
+└── references/
+    ├── detail-a.md       # 50-100 lines
+    └── detail-b.md       # 50-100 lines
 ```
-~/.config/opencode/skills/skill-creator/SKILL.md  ✅
-~/.config/opencode/skills/skillCreator/SKILL.md    ❌
+
+```markdown
+## References
+
+| If you are… | Read… |
+|---|---|
+| Doing X | references/detail-a.md |
+| Doing Y | references/detail-b.md |
 ```
-
-## Skill Discovery
-
-opencode searches these locations:
-
-| Scope | Path |
-|-------|------|
-| Global | `~/.config/opencode/skills/<name>/SKILL.md` |
-| Global (Claude-compatible) | `~/.claude/skills/<name>/SKILL.md` |
-| Global (Agents-compatible) | `~/.agents/skills/<name>/SKILL.md` |
-| Project | `.opencode/skills/<name>/SKILL.md` |
-| Project (Claude-compatible) | `.claude/skills/<name>/SKILL.md` |
 
 ## Validation Checklist
 
-Before finalizing a skill, verify:
+After writing a draft, before committing:
 
-- [ ] `name` matches directory name exactly
-- [ ] `name` is 1-64 chars, lowercase alphanumeric + hyphens only
-- [ ] `description` is 1-1024 characters
-- [ ] `description` contains specific trigger phrases
-- [ ] SKILL.md starts with valid YAML frontmatter
-- [ ] Content uses progressive disclosure appropriately
-- [ ] Content is written in third person / imperative style
-- [ ] No project-specific content in global skills
-
-## Workflow: Create a New Skill
-
-1. **Identify the skill's purpose**
-   - What trigger phrases will load it?
-   - What specific operations does it cover?
-   - Is it project-specific or reusable?
-
-2. **Choose the scope**
-   - Global: `~/.config/opencode/skills/<name>/`
-   - Project: `.opencode/skills/<name>/`
-
-3. **Write the frontmatter**
-   - Craft a `description` with strong trigger phrases
-   - Validate name follows naming rules
-
-4. **Write the core SKILL.md**
-   - Start with one-line purpose statement
-   - Add "When to Use" with trigger phrases
-   - List capabilities with numbers
-   - Close with "Use When" statement
-
-5. **Add references and examples** (optional)
-   - Create `references/` for detailed docs
-   - Create `examples/` for working code
-
-6. **Test the skill**
-   - Ask a question that should trigger the skill
-   - Verify the skill loads and provides useful guidance
+- [ ] Frontmatter has name (matches folder) and description (in double quotes, ≤1024 chars, trigger front-loaded).
+- [ ] When to Use lists trigger contexts.
+- [ ] When NOT to Use is present (or omitted deliberately with a reason).
+- [ ] Hard Rules is numbered, ≤8 rules, imperative + why.
+- [ ] Examples has ≥1 runnable code block.
+- [ ] SKILL.md is ≤150 lines (or split into references/ if longer).
+- [ ] Tested on 2-3 realistic prompts; behavior matches the description.

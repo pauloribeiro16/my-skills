@@ -13,6 +13,8 @@ Creates structured implementation contracts before coding. Based on Anthropic's 
 - Complex features requiring multiple steps
 - Large goals that may need phased decomposition
 - When you need verifiable implementation criteria
+- Any implementation that needs validation
+- When unsure about scope or acceptance criteria
 
 ## What It Covers
 
@@ -23,19 +25,60 @@ Creates structured implementation contracts before coding. Based on Anthropic's 
 5. **Phased Goals** — Decompose large goals into sequential sprints
 6. **Quality Tracking** — Quality Log, Calibration Log, Harness Audit
 
+## Trials
+
+Non-deterministic agents (LLM-based) produce different outputs on each run. To account for variance, contracts support **pass@k** evaluation: run the same task *k* times and measure how many trials pass.
+
+- **Default:** `trials: 3` in the contract header
+- The eval harness (configurable per project) exposes a `--trials` flag
+- A criterion passes if it succeeds in ≥1 of k trials (pass@k)
+- For deterministic changes (refactors, config), `trials: 1` is sufficient
+
+Example contract header:
+
+```yaml
+trials: 3
+pass_threshold: 2/3
+```
+
+Full reference: `references/trials-and-passk.md`
+
 ## Contract Workflow
 
 ```
 CONTRACT → APPROVE → EXECUTE (Executor) → VALIDATE (code-reviewer) → COMMIT
 ```
 
-1. Planner writes CONTRACT.md (from template)
+### Step 0 — Pre-Flight (Planner, BEFORE writing contract)
+
+**MANDATORY:** Read `execution/LESSONS.md` before starting any sprint. This file contains:
+- Model reliability guide (which model for which task)
+- Token waste anti-patterns (subagent explosion, context loops)
+- Bottleneck files (frequently-read files to avoid)
+- Edit tool discipline (re-read before edit)
+- Recurring debugging themes (RAG, Langfuse, Neo4j)
+
+Then activate the `project-conventions` skill (AEGIS-KG specific rules) before writing the contract. The contract MUST include the "Convention Compliance" section from the updated template.
+
+### Step 1 — Contract Creation (Planner)
+
+1. Planner writes CONTRACT.md (from template, including Convention Compliance section)
 2. User approves (max 3 negotiation rounds)
 3. **LAUNCH Executor subagent** — `task(subagent_type="general")`
 4. **LAUNCH code-reviewer subagent** — `task(subagent_type="general")`
 5. If FAIL → Executor fixes → code-reviewer re-checks (max 3 cycles)
 6. **COMMIT validated sprint** — Planner does this, not Executor
 7. After all PASS → update Quality Log
+
+### Step 1.5 — Executor Pre-Implementation (MANDATORY)
+
+**Before Executor writes any code, it MUST:**
+1. Read `execution/LESSONS.md` (especially §3 Bottleneck Files and §4 Edit Tool Discipline)
+2. Activate the `project-conventions` skill
+3. Re-read all target files within the last 3 tool calls (per LESSONS §4)
+4. Run the convention validation commands to establish baseline
+
+If the Executor skips this, the code-reviewer MUST reject the work.
 
 **Rule: Planner NEVER implements. Planner NEVER verifies. Planner only delegates.**
 
@@ -52,6 +95,8 @@ Every MUST criterion needs a **Tier 3** (behavioral) validation — not just syn
 
 **MUST criterion with only T1/T2 validation → FAIL the criterion**
 
+Full reference: `references/validation-tiers.md`
+
 ## Process Rules (Enforcement)
 
 | Rule | What |
@@ -60,6 +105,10 @@ Every MUST criterion needs a **Tier 3** (behavioral) validation — not just syn
 | Never Self-Verify | Always dispatch code-reviewer |
 | Commit After Sprint | `git add + commit` before next sprint |
 | Tier Enforcement | MUST requires T3+ validation |
+| **Read LESSONS.md First** | Both Planner and Executor MUST read `execution/LESSONS.md` before starting |
+| **Activate project-conventions** | Both Executor and code-reviewer MUST activate the project conventions skill |
+| **Convention Compliance** | Every contract MUST include the Convention Compliance section |
+| **Re-Read Before Edit** | Executor MUST re-read target files within last 3 tool calls before editing |
 | Validation Required | No criterion without command |
 
 ## Quality Tracking
@@ -67,6 +116,8 @@ Every MUST criterion needs a **Tier 3** (behavioral) validation — not just syn
 - **Quality Log** — Record score after each validated sprint
 - **Calibration Log** — Track divergences between reviewer and user judgment
 - **Harness Audit** — Every 5 sprints, review what never catches issues
+
+Full reference: `references/quality-tracking.md`
 
 ## Escape Hatches
 
@@ -76,18 +127,8 @@ STOP and ask user when:
 |-----------|--------|
 | 3 failures on any criterion | STOP, report to user |
 | Context >70% | Activate `context-checkpoint` skill |
-| Neo4j ports wrong (7474/7687) | Fix immediately (critical) |
 | Executor finds unexpected blocker | STOP, ask user for guidance |
-| User rejects contract | Revise and re-present (max 3 rounds)
-
-## Agent Configuration
-
-| Agent | Model | Role |
-|-------|-------|------|
-| **planner** | `zai-coding-plan/glm-5.1` | Orchestrator (loads this skill) |
-| **executor** | `minimax/MiniMax-M2.7` | Implementation |
-| **validator** | `minimax/MiniMax-M2.7` | Verification |
-| **explore** | `zai-coding-plan/glm-5.1` | Fast exploration
+| User rejects contract | Revise and re-present (max 3 rounds) |
 
 ## Resources
 
@@ -100,15 +141,16 @@ STOP and ask user when:
 
 ### References
 - `references/contract-workflow.md` — Detailed workflow, correction loop, negotiation rounds
-- `references/phased-decomposition.md` — When to decompose, phased goal workflow, integration
-- `references/validation-tiers.md` — Tier system examples and Requirements Engineering checklist
+- `references/phased-decomposition.md` — When to decompose, phased goal workflow
+- `references/validation-tiers.md` — Tier system examples and checklist
 - `references/quality-tracking.md` — Quality Log, Calibration Log, Saturation Detection, Harness Audit
 - `references/git-integration.md` — Commit strategy, message format, branch management, security hooks
 - `references/execution-phases.md` — All 6 phases, pre-flight checks, explore subagent template
-- `references/executor-prompt-template.md` — Full Executor prompt with tier validation enforcement
+- `references/executor-prompt-template.md` — Full Executor prompt with tier enforcement
 - `references/validator-prompt-template.md` — Full Validator prompt with tier checks
-- `references/pipeline-template.md` — Multi-sprint pipeline, escape hatches, user presentation format
+- `references/pipeline-template.md` — Multi-sprint pipeline, escape hatches
+- `references/trials-and-passk.md` — Trials, pass@k evaluation, and scoring
 
 ## Use When
 
-You need a systematic implementation approach with verifiable criteria and independent verification — not just "implement this and hope it works."
+You need a systematic implementation approach with verifiable criteria and independent verification.

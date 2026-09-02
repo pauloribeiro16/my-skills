@@ -48,6 +48,144 @@ them is a STOP and report to user.
 | 9 | **Read `references/10-checklist.md` before submitting any job.** It is the single source of truth for pre-flight. | Discipline. |
 | 10 | **Stop and ask the user** if you do not know the SLURM account (`-A`), partition (`-p`), QoS (`-q`), or walltime limit. These are site-specific. | Wrong flags = job rejected. |
 
+## Standard facts — learned the hard way, do not relitigate
+
+These are facts that have bitten us in real sessions. Treat them as
+known facts from now on; if a new situation contradicts them, gather
+evidence and surface it rather than re-deriving.
+
+### Ollama model tags (must match the exact library name)
+
+| Tag | Library dir on cluster |
+|-----|------------------------|
+| `granite4.2:30b` | `.../ollama_data/models/manifests/registry.ollama.ai/library/granite4.2/` |
+| `muse-glimmer:30b` | `.../library/muse-glimmer/` |
+| `qwen3.8:27b` | `.../library/qwen3.8/` |
+| `qwen3.5:27b` | `.../library/qwen3.5/` |
+| `qwen3.5:9b` | `.../library/qwen3.5/` |
+| `gemma4:26b` | `.../library/gemma4/` |
+| `gemma4:e2b` / `gemma4:e4b` | `.../library/gemma4/` |
+| `nemotron-3.5-lightning:30b` | `.../library/nemotron-3.5-lightning/` |
+| `ornith:9b` | `.../library/ornith/` |
+| `glm-4.7-flash:latest` | `.../library/glm-4.7-flash/` |
+| `gpt-oss:20b` | `.../library/gpt-oss/` |
+| `phi4:14b` | `.../library/phi4/` |
+| `mistral:7b`, `ministral-3:8b`, `llama3.2:1b` | `.../library/{mistral,ministral-3,llama3.2}/` |
+
+**Trap to avoid:** short-form tags (`nemotron3.5:30b`, `granite:30b`,
+`ornith-1.5:9b`) silently trigger `ollama pull` — which fails because
+the cluster has **no egress** to `https://registry.ollama.ai` from
+compute nodes. Result: minutes wasted, job aborts. Verify the cache
+directory before `sbatch`, not the tag string alone. Use
+`examples/gpu-pick.sh <tag>` to also pick the right partition.
+
+### Two Ollama binaries — pick the right one for the model
+
+| Binary | Version | Used for |
+|--------|---------|----------|
+| `$BD/bin/ollama` (`$BD=/projects/F202512235CPCAA1/CyberMetric_Deucalion`) | **0.31.1** | `serve` for known architectures (gemma3/4, qwen3.x, llama, mistral, phi, granite4.2, muse-glimmer) |
+| `$BD=/projects/F202512235CPCAA1/graphify-methodology/bin/ollama` (`+ lib/ollama` in LD_LIBRARY_PATH) | **0.32.13** | `serve` for unknown/edge architectures AND **the only one that can `ollama pull` modern manifests** |
+
+0.31.1 cannot resolve modern manifests (`granite4.2:30b` fails with
+`unknown model architecture`). When in doubt, use 0.32.13 from
+`graphify-methodology/`.
+
+### Parallel jobs (proven pattern, 2026-09-02)
+
+- **Across nodes: safe.** Multiple scouts on different nodes each get
+  their own GPU and port 11434 — confirmed with JOBs 1869099/100/101.
+  Each lives on its own `--gres=gpu:1`.
+- **Same node: 2 jobs collide** on `11434` (Ollama server). Resource
+  contention shows up as `Connection refused` in the 2nd job and the
+  warm-up fails. Mitigation: check `squeue -o "%.6R"` (Reason
+  column); if both jobs say the same node and it isn't yet fully
+  routed, cancel and submit again.
+- **Walltime budgets (as of 2026-09-02, battle-tested):**
+  - Phase 1B scout (4 LLM calls + Doc 05 only): **30 min**.
+  - Phase 1+2+3 scout-full (full pipeline, 9 docs + xlsx): **1 h 30**.
+  - Full run-all (warm-up + pipeline + bulk output): **8 h**.
+
+### Stale `.pyc` cache after a code sync (proven 2026-09-02)
+
+When you sync updated Python files to Deucalion (via `scp`, `rsync`, or
+`tar extract`) the cluster's `_archive/.../markdown_parser.py` is
+fresh but the corresponding `__pycache__/*.pyc` is **stale**. Python
+happily loads the old bytecode, finds `ImportError: cannot import name
+'X'`, and the job aborts ~1 minute after warm-up with a confusing trace.
+
+**Always include these in sbatch scripts before `python` is invoked:**
+
+```bash
+echo "=== wiping stale .pyc + __pycache__ (defense-in-depth) ==="
+find "$PROJ/src" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+find "$PROJ/src" -name "*.pyc" -delete 2>/dev/null || true
+PYTHONDONTWRITEBYTECODE=1
+export PYTHONDONTWRITEBYTECODE
+```
+
+The byte-code-suppression flag is also useful for `--gres` shared GPU
+runs where two Python processes might write to the same `__pycache__`
+directory simultaneously and corrupt each other.
+
+### `scp` and `$HOME` quota
+
+- The user's `$HOME` on Deucalion has a tight quota (a few GB).
+  `scp ... ~/` often fails with `Disk quota exceeded`. **Stage through
+  `/tmp` (per-job, auto-cleared)**: `scp foo.py user@login:/tmp/`,
+  then `ssh user@login 'cp /tmp/foo.py <dest>'`.
+- Two `scp` calls with the same basename to the same `/tmp/`
+  overwrite each other (no subdir mapping). Use unique basenames, or
+  combine into a single `tar -cz` first.
+- Always `chmod +x` after the copy if the destination is a script.
+
+### Job-name uniqueness — `squeue` is unreadable if everything is `aegis_scout`
+
+The `--job-name` directive is pre-evaluated; you cannot use `$1` in it.
+For multiple parallel scouts, pass the sanitised model tag via the
+`sbatch` CLI:
+
+```bash
+sbatch -J "aegis_<sanitised-tag>_full" <script> <model:tag>
+```
+
+where `<sanitised-tag>` is the model tag with `:` and `.` replaced by
+`_`. Use the wrapper `scripts/scouts/scout-full-submit.sh` to print the
+exact line — otherwise each scout ends up with the same
+`aegis_scout_full` job-name and `squeue` becomes a wall of duplicates.
+
+### Egress
+
+Compute nodes cannot reach `registry.ollama.ai` (HTTPS timeout). New
+models must be pulled on the **login node** with the **graphify
+0.32.13** binary in `/projects/F202512235CPCAA1/graphify-methodology`,
+then the manifests land in the shared
+`/projects/F202512235CPCAA1/CyberMetric_Deucalion/ollama_data/models/`
+cache and are visible to compute nodes.
+
+### Monitoring jobs
+
+- `squeue -u $USER` — quick status (only running/pending; finished jobs
+  drop off after a few minutes).
+- `sacct -j <JOBID> --format=JobID,State,ExitCode,Elapsed,MaxRSS` —
+  post-mortem state and resource use.
+- `scontrol show job <JOBID>` — full live state (good for
+  diagnostics like Reason, StdOut path, NodeList).
+- `cat /projects/<...>/<project>/logs/scout_runs/scout_<tag>_<JOB>.log`
+  for the per-run structured log (preferred over `slurm-*.out`).
+- `cat /projects/<...>/<project>/slurm-<script>-<JOB>.out` for
+  stdout/stderr (slurm-managed, slow to appear).
+
+### Path conventions for AEGIS-Phase-1
+
+- **Active project dir:** `/projects/F202512235CPCAA1/CyberMetric_Deucalion/aegis-phase1`.
+  (The old `~/aegis-kg` path is the CORR-057 eval layout; superseded.)
+- **Output dirs** (created by `--output`):
+  - `output/run_<model>_<JOB>` for full run-alls.
+  - `output/scout_<model>_<JOB>` for Phase 1B-only scouts.
+  - `output/scout_full_<JOB>` for pipeline-complete scouts.
+- **Run logs:** `logs/scout_runs/scout_<tag>_<JOB>.log`.
+- **Per-model JSONL traces:** `logs/phase1/<model>/v2/pipeline_<model>.log`.
+
 ## Quick-Start (5 Steps)
 
 1. **Access.** SSH to the login node:
@@ -201,6 +339,7 @@ Rules encoded in that sbatch (do not relearn the hard way):
 | `examples/ollama-gpu.sbatch` | Start Ollama on a GPU compute node (as a service job) | Pattern B (shared service for many workers) |
 | `examples/eval-batch.sbatch` | Submit eval tasks (1+ tasks, N trials) | Full eval with Neo4j |
 | `examples/run-etl.sbatch` | Run an ETL phase end-to-end | ETL with Neo4j |
+| `examples/gpu-pick.sh` | VRAM estimate + smallest-fit partition for a model tag | **Before any sbatch** that picks a partition based on the model |
 
 ## How This Skill Coordinates with Others
 

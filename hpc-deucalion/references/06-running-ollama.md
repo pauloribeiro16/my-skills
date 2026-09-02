@@ -12,6 +12,54 @@
 **Default: Ollama on a GPU node, one model loaded per job.** Switch to
 vLLM only if the user asks.
 
+## Pick the right GPU — sizing by parameters × quant × ctx
+
+VRAM at inference ~ model weights + KV cache (ctx) + 1.5-2 GB of overhead
+(Ollama runtime + activations). The cache partitioning in 0.32+ lets the
+weights sit on one GPU and KV spill to another, so 2× GPU on the **same
+node** is the right way to split a model that overflows one card.
+
+Concrete figures (Ollama default quant is Q4_K_M unless the tag says
+otherwise; ctx defaults to 2048, scale linearly with context length):
+
+| Model tag (params)  | Weights (Q4_K_M) | + KV @ 32k ctx | + headroom | Fits 1× A100-40GB? | Fits 1× A100-80GB? |
+|---------------------|------------------|----------------|------------|--------------------|--------------------|
+| ≤ 9B (`ornith:9b`, `phi4:14b`) | 6-10 GB | 0.5-1 GB | +2 GB | **yes** | yes (overkill) |
+| 14-20B | 10-14 GB | 1-2 GB | +2 GB | **yes** | yes (overkill) |
+| 27-30B (`qwen3.8:27b`, `granite4.2:30b`, `nemotron-3.5-lightning:30b`, `muse-glimmer:30b`) | 18-22 GB | 4-6 GB | +2 GB | **yes** | yes |
+| 70B (`llama3:70b`-style) | 42-46 GB | 8-10 GB | +2 GB | no, ~64GB | **yes** (one card, 80GB) |
+| > 80B weights | 60+ GB | scales | +2 GB | no | no — use `--gres=gpu:a100:2` on the same A100-80 node |
+
+These are **fits-in-VRAM** estimates. Other bottlenecks (context-length
+balloon at 65k+, OOM at intermediate layers) come up only at extreme
+contexts that AEGIS doesn't use (≤ 32k). KV cache scaling: fp16 KV cache
+≈ `2 × n_layers × n_kv_heads × head_dim × 2 bytes × seq_len` — for a
+70B Q4 model with 32k ctx the KV cache is roughly 8-10 GB. If your
+prompt+output is much larger, bump the estimated headroom by 10-20%.
+
+**Decision tree before submitting `sbatch`:**
+
+1. Total weights + KV ≤ 36 GB → try `dev-a100-40` first; fall back to
+   `normal-a100-40`. Saves the 80GB queue for models that need it.
+2. Total weights + KV 36-72 GB → `dev-a100-80`; fall back to
+   `normal-a100-80`.
+3. Total > 72 GB → `--gres=gpu:a100:2` on the same 80GB node (Ollama
+   splits layers automatically; never cross-node). With ≥2× 40GB
+   GPUs available AND the workload tolerates slower inference,
+   `--gres=gpu:a100:2` on `dev-a100-40` also works (more queue slots).
+4. Egress to `registry.ollama.ai` is blocked on compute nodes — if the
+   model isn't in the local cache, schedule a
+   `download-models.sbatch` on `normal-a100-40` first (see Recipe below).
+
+**Parallel jobs (today's lesson, 2026-09-02):** multiple scouts on
+**different nodes** run safely; multiple scouts on the same node
+collide on port 11434 (Connection refused / Server disconnected). After
+`SBATCH` shows your batch in `squeue`, **check `%.32R` (Reason column)
+or `scontrol show job <id>` before assuming success** — a
+`Nodes required for job are DOWN, DRAINED or reserved` reason means
+SLURM is still schedulering and your parallel batch isn't actually
+parallel yet.
+
 ## GPU sanity check (inside the allocation)
 
 ```bash

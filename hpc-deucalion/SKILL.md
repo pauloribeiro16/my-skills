@@ -30,6 +30,27 @@ Activate this skill when **any** of the following is true:
 - A planned change involves pip-installing heavy packages, moving large CSVs,
   or running a job longer than a few minutes.
 
+## Staged launch process (MANDATORY, 2026-09-04)
+
+**Do NOT submit a job to Deucalion until each previous stage is green.**
+
+| Stage | Where | What | Tool | Pass criterion |
+|-------|-------|------|------|----------------|
+| **0. Local preflight** | workstation | bash -n + lint + import smoke + deterministic-only run + cache check | `bash scripts/hpc/preflight_local.sh [--models "<tags>"]` | prints "PREFLIGHT OK" — catches `.pyc` stale, missing imports, syntax breaks, cache miss before any cluster cost. |
+| **1. Cluster smoke (1 GPU)** | Deucalion login → sbatch | cheapest model (e.g. ornith:9b) on dev-a100-40, walltime 30 min | `sbatch -J aegis_smoke_<model> --partition=dev-a100-40 --gres=gpu:a100:1 …` | warm-up OK + run_full completes with docs in `output/scout_full_<JOB>/`. |
+| **2. Real run (1 GPU)** | Deucalion login → sbatch | the actual model on the partition `gpu-pick.sh` chose | `sbatch -J <job-name>` | 9 docs + xlsx in `output/run_<tag>_<case>_<JOB>/`. |
+| **3. Scale** | Deucalion login → sbatch | multiple models/cases in parallel (one per node) | `bash scripts/runs_tools/status.sh` then submit | distributed across distinct nodes (no two jobs on the same node for the Ollama 11434 port). |
+
+**Why staging matters — confirmed wins (2026-09-02):**
+
+- 4 scouts `FAILED` because Ollama crashed at 5 min (port 11434 collision on same node).
+- 3 jobs `FAILED` with empty logs (pre-cluster update of `run-full-m-aegis.sbatch`).
+- 5 jobs `FAILED` because model tags were wrong (cache miss + no egress).
+- 2 jobs `COMPLETED` but produced 0 docs because `run_all` aborted before OUTPUT stage
+  (patched upstream as CORR-114).
+
+Each class is preventable. Stage 0 catches about half before cluster, the others between stages 1 and 2.
+
 ## Hard Rules (Non-Negotiable)
 
 These apply to **any** Deucalion work, regardless of task. Violating any of
@@ -236,6 +257,38 @@ run `examples/download-models.sbatch` (a separate sbatch job on
 `normal-a100-40`). Do NOT `ollama pull` inside AEGIS-KG jobs — compute
 nodes have spotty egress to `registry.ollama.ai`.
 
+## vLLM on Deucalion (AEGIS-KG CORR-110, 2026-09-02, unverified)
+
+For models that the local Ollama 0.31.1 daemon refuses to load
+(Qwen3.8-Flash-Next, qwen3.8:27b, anything outside the known-arch
+list), or when you want the exact HF model id with no tag drift,
+use vLLM. The aegis-phase1 pipeline talks to any OpenAI-compatible
+HTTP server through ``ChatOpenAICompat`` (no new project dep — only
+``httpx``).
+
+```bash
+# Pilot sbatch (single-job, TP=8 on dev-a100-80 for Qwen3.8-Flash-Next):
+sbatch /projects/F202512235CPCAA1/CyberMetric_Deucalion/aegis-phase1/examples/deucalion/scout-vllm-qwen-flash-next-aegis.sbatch
+# Override default scope (run-all → phase-1b for cheap scout):
+sbatch --export=AEGIS_SCOPE=phase-1b \
+       /projects/F202512235CPCAA1/CyberMetric_Deucalion/aegis-phase1/examples/deucalion/scout-vllm-qwen-flash-next-aegis.sbatch
+```
+
+Prereqs: weights pre-staged on Lustre under
+`$BD/models/hf/Qwen_Qwen3.8-Flash-Next/` (~360 GB — no egress from
+compute nodes); a venv with `vllm` at `$AEGIS_VLLM_VENV`
+(default `/projects/F202512235CPCAA1/cybermetric-vllm-cache/venv` —
+the sibling project's working install, but verify it still works
+after a cluster change). The pilot sbatch defaults to TP=2 on
+A100-40 (sized for the original gemma-4-31B-it pilot); **you MUST
+override `--gres=gpu:a100:8` and `-p dev-a100-80` before submitting**
+for Qwen3.8-Flash-Next (125B+ params ≈ 360 GB BF16 — won't fit
+otherwise). Recipe details + patterns A/B/C + TP=N sizing + likely
+gotchas: see `references/11-running-vllm.md`. The branch carrying
+the wiring is `feature/aegis-p1-corr-110-vllm-provider` in
+`aegis-phase1`. **No successful cluster run logged yet — the
+section above is the documented recipe, not a verified pattern.**
+
 ### Ollama version split (2026-09-01, battle-tested)
 
 There are **two Ollama binaries** on the cluster and they are NOT
@@ -325,6 +378,7 @@ Rules encoded in that sbatch (do not relearn the hard way):
 | ETL / eval / batch orchestration | `references/08-data-pipeline.md` |
 | Quota, GPU, OOM, network, port issues | `references/09-troubleshooting.md` |
 | Pre-flight checklist (always read) | `references/10-checklist.md` |
+| vLLM (CORR-110, AEGIS-KG pipeline provider) | `references/11-running-vllm.md` |
 
 ## Templates (Copy-Paste)
 
@@ -406,7 +460,22 @@ All site-specific values are real. No placeholders to substitute.
 | `<REPO_URL>` | (HTTPS clone fails) — use `tar+scp` | -- |
 | `<BRANCH>` | `main` | -- |
 
-**Last Updated:** 2026-09-01
+## Error playbook (2026-09-02 + 2026-09-04 lessons)
+
+Run `grep -ho "<token>" ~/.zcode/cli/rollout/*.jsonl | sort | uniq -c | sort -rn`
+on the prior sessions to count these if you're unsure. Recurring errors
+with their cause and the resolver:
+
+| Symptom (in `scout_runs/run-*.log` or `slurm-*`) | Cause | Fix |
+|---|---|---|
+| `model 'X' not found (404)` | pull interrupted → blobs cached but no manifest dir under `library/<name>/<tag>` | `bash scripts/hpc/pull-verify.sh X` on login node (re-pulls the manifest in seconds when blobs are present). |
+| `cannot import name 'P1BLLM02Parser' (or any other class)` after a `scp`/`tar` sync | `.pyc` stale in `__pycache__/` (Python found old bytecode that references a class that no longer exists in the source) | every sbatch must run `find "$PROJ/src" -name __pycache__ -type d -exec rm -rf {} +` + `PYTHONDONTWRITEBYTECODE=1` before invoking Python (now part of every hardened sbatch + `_lib/common.sh`). |
+| `Ollama not reachable at http://localhost:11434` (probe from invoke_raw) | two Ollama-serving jobs on the same GPU node compete for port 11434 | new sbatches compute `PORT=$((11434 + JOBID % 20000))` and export `OLLAMA_HOST=127.0.0.1:$PORT` + `OLLAMA_BASE_URL` (the UnifiedInvoker already reads `OLLAMA_BASE_URL`). |
+| `Pipeline aborted — MAP mostly failed (X/10 domains)` after which **no docs were written** | old `run_all` re-raised `MapPartialFailure` before `reduce()`+`generate_outputs()` ran. Patched in CORR-114 (`orchestrator.run_all` now catches, renders partial docs, then re-raises). Update your code OR mirror the patch in your branch. |
+| `warm-up failed` repeatedly inside 10 retries | model not in cache (manifest missing) OR model architecture incompatible with the binary in PATH (e.g. qwen3.8 against 0.31.1; nemotron against 0.31.1) | check `ls <cache>/library/<name>/<tag>`; if absent, `pull-verify.sh`; if present, switch to **0.32.13** from `/projects/.../graphify-methodology/{bin,lib/ollama}` (set `PATH` and `LD_LIBRARY_PATH` BEFORE `ollama serve`). |
+| `ollama pull failed; aborting` AND `i/o timeout` | compute nodes have **no egress** to `registry.ollama.ai`. Pulls inside jobs always die. | never `ollama pull` inside a sbatch. Always pull on the **login node** with the graphify 0.32.13 binary (the only one that resolves modern manifests). |
+| `Pipeline aborted — MAP mostly failed (10/10 domains)` — short time | small/medium model cannot follow `P1C-LLM-01-OVERLAP-CLASSIFICATION` spec | expected behaviour for these models. Raise the model count after documenting the scoreboard — don't try to patch the spec. |
+| `3 jobs FAILED with empty logs` | pre-cluster-update sbatch had `RUN_LOG` created **after** some early failures | every hardened sbatch creates `RUN_LOG` and redirects stdout+stderr **before** the first `echo`/call. `trap` writes final `END=` + `EXIT_CODE=` so even an early crash leaves forensics. |
 
 ## Companion: Human-Oriented Workflow Doc
 

@@ -5,15 +5,23 @@ Detailed workflow for executing a sprint contract.
 ## Standard Contract Workflow
 
 ```
-1. Planner writes CONTRACT.md (from template)
-2. User approves (max 3 negotiation rounds)
-3. Executor reads CONTRACT.md
-4. Executor implements criteria sequentially
-5. code-reviewer verifies each criterion
-   - If FAIL → Executor fixes → code-reviewer re-checks (max 3)
-   - If still FAIL after 3 → STOP and ask user
-6. After all PASS → code-reviewer appends to QUALITY_LOG.md
+1. Planner writes CONTRACT.json (from template — default-FAIL: all criteria start passed:false)
+2. Evaluator reviews contract UPFRONT (fresh context):
+   - Are test_command(s) adequate (Tier 3 for MUST, Tier 2 for SHOULD)?
+   - Are criteria clearly falsifiable and measurable?
+   - Negotiate fixes with the Planner BEFORE any code is written
+3. User approves (max 3 negotiation rounds)
+4. Generator reads CONTRACT.json (fresh context, separate from the Evaluator)
+5. Generator implements criteria sequentially
+6. Evaluator verifies each criterion (fresh context — never saw the Generator's work)
+   - If NEEDS_WORK → Generator fixes → Evaluator re-checks (max 3)
+   - If still NEEDS_WORK after 3 → STOP and ask user
+7. After all PASS → Evaluator appends to QUALITY_LOG.md
 ```
+
+> **Why upfront Evaluator review?** Catching vague or untestable criteria before
+> generation saves the most expensive resource: implementation time. The Evaluator
+> negotiates *what should be true* and *how we will measure it* up front.
 
 ## Negotiation Rounds
 
@@ -28,14 +36,14 @@ Max 3 rounds. After that, present final version for approval or abandonment.
 ## Correction Loop
 
 ```
-Executor implements criterion
+Generator implements criterion
          │
          ▼
-    code-reviewer verifies
+    Evaluator verifies
          │
     ┌────┴────┐
     │         │
-  PASS      FAIL
+  PASS    NEEDS_WORK
     │         │
     ▼         ▼
   next   classify error
@@ -44,10 +52,12 @@ Executor implements criterion
              ├─→ RUNTIME_ERROR
              ├─→ FILE_MISSING
              ├─→ SYNTAX_ERROR
-             └─→ LOGIC_ERROR
+             ├─→ LOGIC_ERROR
+             ├─→ PORT_ERROR
+             └─→ SECRET_ERROR
              │
              ▼
-       Executor fixes
+       Generator fixes
              │
              ▼
        attempt++
@@ -61,4 +71,4 @@ Executor implements criterion
                (ask user)
 ```
 
-**Max 3 correction cycles per criterion. After 3 failures: STOP and ask user for guidance.**
+**Max 3 correction cycles per criterion. After 3 NEEDS_WORK verdicts: STOP and ask user for guidance.**

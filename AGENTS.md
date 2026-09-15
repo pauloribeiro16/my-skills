@@ -60,6 +60,12 @@ directory is an independent skill with a `SKILL.md`.
 | `langfuse` | Observability, tracing, monitoring |
 | `llm-observability-stack` | Full LLM + observability stack |
 
+### Academic Writing
+| Skill | Description |
+|-------|-------------|
+| `academic-writing` | Draft/structure each article section (AIMRaD, sentence templates, English articles) |
+| `academic-evaluation` | Review/critique a draft against 13 referee criteria; respond to reviewers; handle rejection |
+
 ### Enterprise & Communication
 | Skill | Description |
 |-------|-------------|

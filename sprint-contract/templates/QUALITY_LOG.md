@@ -1,6 +1,6 @@
 # QUALITY_LOG.md
 
-**Format:** code-reviewer appends after each validated contract.
+**Format:** Evaluator appends after each validated contract.
 
 ---
 
@@ -47,7 +47,7 @@ Tracks whether quality criteria remain challenging enough.
 ## Verdict Rules
 
 - **PASS:** ALL criteria met, all dimensions at threshold
-- **FAIL:** Any criterion fails, any dimension below threshold
+- **NEEDS_WORK:** Any criterion fails, any dimension below threshold
 - **PARTIAL:** Some criteria met, requires discussion with user
 
 ---

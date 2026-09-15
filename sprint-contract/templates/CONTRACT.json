@@ -1,0 +1,89 @@
+{
+  "contract_id": "SC-YYYY-NN",
+  "feature": "[Feature Name]",
+  "date": "YYYY-MM-DD",
+  "planner": "[name]",
+  "spec_file": "SPEC.md",
+  "status": "DRAFT",
+  "phase": "1 of N",
+  "depends_on": "Phase X",
+  "parallel_group": "G0",
+  "parent_goal": "GOAL_DECOMPOSITION.md",
+  "trials": 3,
+  "pass_threshold": "2/3",
+  "scope": "[What files change and why. Be specific about the goal.]",
+  "criteria": [
+    {
+      "id": "C1",
+      "description": "[Testable, binary PASS/NEEDS_WORK]",
+      "weight": "MUST",
+      "tier": 3,
+      "test_command": "python -c \"from m import f; assert f(x) == expected\"",
+      "expected": "[Exact output or behavior]",
+      "passed": false,
+      "verdict": "PENDING",
+      "evidence": null,
+      "attempts": 0
+    },
+    {
+      "id": "C2",
+      "description": "[Testable, binary PASS/NEEDS_WORK]",
+      "weight": "MUST",
+      "tier": 3,
+      "test_command": "python -c \"from m import f; r=f(); assert isinstance(r, dict)\"",
+      "expected": "[Exact output or behavior]",
+      "passed": false,
+      "verdict": "PENDING",
+      "evidence": null,
+      "attempts": 0
+    },
+    {
+      "id": "C3",
+      "description": "[Testable, binary PASS/NEEDS_WORK]",
+      "weight": "SHOULD",
+      "tier": 2,
+      "test_command": "python -c \"from m import X; X()\"",
+      "expected": "[Exact output or behavior]",
+      "passed": false,
+      "verdict": "PENDING",
+      "evidence": null,
+      "attempts": 0
+    },
+    {
+      "id": "C4",
+      "description": "[Testable, binary PASS/NEEDS_WORK]",
+      "weight": "NICE",
+      "tier": 1,
+      "test_command": "python -m py_compile [path]",
+      "expected": "exit 0",
+      "passed": false,
+      "verdict": "PENDING",
+      "evidence": null,
+      "attempts": 0
+    }
+  ],
+  "quality_dimensions": [
+    {"name": "Correctness", "threshold": "100%", "result": null},
+    {"name": "Pattern Compliance", "threshold": ">=3/4", "result": null},
+    {"name": "No Regressions", "threshold": "100%", "result": null},
+    {"name": "Data Integrity", "threshold": "100%", "result": null}
+  ],
+  "risks": [
+    "[What could break]",
+    "[How to rollback]"
+  ],
+  "files_to_change": [
+    {"file": "src/x.py", "action": "create/modify", "why": "reason"},
+    {"file": "src/y.py", "action": "create/modify", "why": "reason"}
+  ],
+  "correction_loop": {
+    "max_cycles": 3,
+    "current_cycle": 0
+  },
+  "sign_off": {
+    "user_approved": false,
+    "generator_implemented": false,
+    "evaluator_verified": false,
+    "quality_log_updated": false
+  }
+}

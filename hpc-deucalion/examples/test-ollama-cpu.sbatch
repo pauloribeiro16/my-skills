@@ -34,6 +34,11 @@ umask 077
 export DEUCALION_PYTHON_MODULE="<DEUCALION_PYTHON_MODULE>"
 source "$(dirname "${BASH_SOURCE[0]}")/env-setup.sh"
 
+# --- Shared preamble (CUDA, DeepSpeed, cache dirs, helpers) ---
+# Centralises every env fix documented in docs/lessons-learned.md.
+# Override variables BEFORE this line if you need a different topology.
+source "$(dirname "${BASH_SOURCE[0]}")/aegis-common.sh"
+
 SCRATCH_JOB="$SCRATCH/aegis-cpu-${SLURM_JOB_ID}"
 OLLAMA_MODELS_DIR="$SCRATCH_JOB/ollama-models"
 RESULTS_DIR="$WORK/aegis-kg/results/ollama-cpu-${SLURM_JOB_ID}"

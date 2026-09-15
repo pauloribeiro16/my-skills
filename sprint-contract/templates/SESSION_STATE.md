@@ -15,8 +15,8 @@
 ## Next Steps
 
 1. Continue Task B
-2. Run code-reviewer on Task A
-3. Update CONTRACT.md
+2. Run Evaluator on Task A
+3. Update CONTRACT.json
 
 ## Exact Continuation Point
 
@@ -50,8 +50,8 @@ Next action: what to do next
 
 | Phase | Contract | Result | Score | Date |
 |-------|----------|--------|-------|------|
-| 1 | CONTRACT-phase-1.md | PASS/FAIL | [N%] | YYYY-MM-DD |
-| 2 | CONTRACT-phase-2.md | PASS/FAIL | [N%] | YYYY-MM-DD |
+| 1 | CONTRACT-phase-1.json | PASS/NEEDS_WORK | [N%] | YYYY-MM-DD |
+| 2 | CONTRACT-phase-2.json | PASS/NEEDS_WORK | [N%] | YYYY-MM-DD |
 
 ## Git State
 
@@ -72,4 +72,4 @@ Next action: what to do next
 
 - Don't restart from scratch — read SESSION_STATE.md first
 - Check here for blocked tasks
-- code-reviewer should verify before continuing
+- Evaluator should verify before continuing

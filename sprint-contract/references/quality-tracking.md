@@ -19,7 +19,7 @@ Record score after each validated sprint.
 - **Patterns**: Naming, structure, imports follow conventions (≥3/4)
 - **Regressions**: Previously-passing tests still pass
 - **Data**: Ports correct (7688/7475), no cross-case leakage
-- **Verdict**: PASS / FAIL / PARTIAL
+- **Verdict**: PASS / NEEDS_WORK / PARTIAL
 
 ---
 
@@ -51,8 +51,8 @@ Each criterion has a weight that determines its blocking power.
 
 ### Scoring Rules
 
-1. **MUST gate**: If ANY MUST criterion fails → **VERDICT: FAIL**
-2. **SHOULD gate**: If <50% of SHOULD criteria pass → **VERDICT: FAIL**
+1. **MUST gate**: If ANY MUST criterion fails → **VERDICT: NEEDS_WORK**
+2. **SHOULD gate**: If <50% of SHOULD criteria pass → **VERDICT: NEEDS_WORK**
 3. **NICE**: Pure bonus — never influences verdict
 4. **Score formula**: `(passed_must + passed_should + passed_nice) / total_criteria × 100%`
 
@@ -84,14 +84,14 @@ If 3+ consecutive contracts score 100%, the evaluation has saturated — no sign
 
 ## Evaluator Calibration
 
-Track divergences between code-reviewer judgment and user judgment to tune quality criteria.
+Track divergences between Evaluator judgment and user judgment to tune quality criteria.
 
 ### Calibration Workflow
 
 ```
-1. code-reviewer reviews → records result in Quality Log
+1. Evaluator reviews → records result in Quality Log
 2. If user disagrees with verdict → user flags divergence
-3. code-reviewer appends entry to CALIBRATION_LOG.md
+3. Evaluator appends entry to CALIBRATION_LOG.md
 4. Before next contract → Planner reads CALIBRATION_LOG
 5. Planner adjusts criteria (strengthen/relax/simplify)
 6. Run 3 sprints → mark action as VALIDATED if no recurrence
@@ -99,16 +99,16 @@ Track divergences between code-reviewer judgment and user judgment to tune quali
 
 ### When to Calibrate
 
-- After any sprint where user manually overrides code-reviewer
+- After any sprint where user manually overrides Evaluator
 - Every 5 sprints as routine review
-- When Quality Log shows systematic bias (all PASS or all FAIL)
+- When Quality Log shows systematic bias (all PASS or all NEEDS_WORK)
 
 ### Calibration Actions
 
 | Divergence Type | Action |
 |-----------------|--------|
-| False positive (reviewer PASS, user FAIL) | Strengthen criterion or add validation command |
-| False negative (reviewer FAIL, user PASS) | Simplify criterion or downgrade MUST → SHOULD |
+| False positive (reviewer PASS, user NEEDS_WORK) | Strengthen criterion or add validation command |
+| False negative (reviewer NEEDS_WORK, user PASS) | Simplify criterion or downgrade MUST → SHOULD |
 | Same criterion fails 3+ times | Consider if criterion is load-bearing or noise |
 
 ---

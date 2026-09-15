@@ -1,22 +1,22 @@
 # CALIBRATION_LOG.md
 
-Records divergences between code-reviewer judgment and user judgment.
+Records divergences between Evaluator judgment and user judgment.
 Used to tune quality criteria over time.
 
 ---
 
 ## Format
 
-code-reviewer appends entries. User adds corrections. Planner reads before writing new contracts.
+Evaluator appends entries. User adds corrections. Planner reads before writing new contracts.
 
 ---
 
 ## Log
 
-| Date | Contract | Reviewer | User | Criterion | Root Cause | Action | Status |
+| Date | Contract | Evaluator | User | Criterion | Root Cause | Action | Status |
 |------|----------|----------|------|-----------|------------|--------|--------|
-| YYYY-MM-DD | Feature Name | PASS | FAIL | C3 — Code coverage | Missed edge case | Lower threshold to 75% | OPEN |
-| YYYY-MM-DD | Feature Name | FAIL | PASS | C5 — Naming convention | Overly strict rule | Downgrade MUST → SHOULD | RESOLVED |
+| YYYY-MM-DD | Feature Name | PASS | NEEDS_WORK | C3 — Code coverage | Missed edge case | Lower threshold to 75% | OPEN |
+| YYYY-MM-DD | Feature Name | NEEDS_WORK | PASS | C5 — Naming convention | Overly strict rule | Downgrade MUST → SHOULD | RESOLVED |
 
 ---
 
@@ -24,10 +24,10 @@ code-reviewer appends entries. User adds corrections. Planner reads before writi
 
 | Field | Description |
 |-------|-------------|
-| **Reviewer** | code-reviewer verdict (PASS / FAIL) |
-| **User** | User actual verdict (PASS / FAIL) |
+| **Evaluator** | Evaluator verdict (PASS / NEEDS_WORK) |
+| **User** | User actual verdict (PASS / NEEDS_WORK) |
 | **Criterion** | Which contract criterion diverged |
-| **Root Cause** | Why the code-reviewer was wrong |
+| **Root Cause** | Why the Evaluator was wrong |
 | **Action** | Proposed change to criteria or validation |
 | **Status** | OPEN → RESOLVED → VALIDATED |
 
@@ -47,8 +47,8 @@ code-reviewer appends entries. User adds corrections. Planner reads before writi
 |---------|---------------|------------------|
 | Same criterion → 3+ false positives | Too lenient | Strengthen MUST or add validation command |
 | Same criterion → 3+ false negatives | Too strict | Simplify or downgrade MUST → SHOULD |
-| All reviewers PASS, user FAILs | Systemic leniency | Add stricter MUST criteria |
-| All reviewers FAIL, user PASSes | Systemic strictness | Review if criteria are realistic |
+| All evaluators PASS, user FAILs | Systemic leniency | Add stricter MUST criteria |
+| All evaluators NEEDS_WORK, user PASSes | Systemic strictness | Review if criteria are realistic |
 
 ---
 
@@ -56,6 +56,6 @@ code-reviewer appends entries. User adds corrections. Planner reads before writi
 
 <!-- Add new entries above this line -->
 
-| Date | Contract | Reviewer | User | Criterion | Root Cause | Action | Status |
+| Date | Contract | Evaluator | User | Criterion | Root Cause | Action | Status |
 |------|----------|----------|------|-----------|------------|--------|--------|
 

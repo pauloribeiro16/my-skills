@@ -32,6 +32,11 @@ export DEUCALION_PYTHON_MODULE="<DEUCALION_PYTHON_MODULE>"
 source "${AEGIS_KG_DIR:-$WORK/aegis-kg}/../env-setup.sh" 2>/dev/null \
   || source "$(dirname "${BASH_SOURCE[0]}")/env-setup.sh"
 
+# --- Shared preamble (CUDA, DeepSpeed, cache dirs, helpers) ---
+# Centralises every env fix documented in docs/lessons-learned.md.
+# Override variables BEFORE this line if you need a different topology.
+source "$(dirname "${BASH_SOURCE[0]}")/aegis-common.sh"
+
 # --- Neo4j data dir on local-fast scratch ---
 NEO4J_DATA_DIR="$SCRATCH/neo4j-data-${SLURM_JOB_ID}"
 mkdir -p "$NEO4J_DATA_DIR"

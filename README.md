@@ -72,7 +72,19 @@ Skills for programming and developer tooling.
 
 ---
 
-## Data, AI & Observability
+## Academic Writing
+
+Skills for writing and reviewing scientific articles (based on Cargill &
+O'Connor, *Writing Scientific Research Articles: Strategy and Steps*, 2009).
+
+| Skill | Description |
+|-------|-------------|
+| **`academic-writing`** | Draft and structure each section of a research article (Introduction, Methods, Results, Discussion, Title, Abstract) — IMRAD, sentence templates, English article usage |
+| **`academic-evaluation`** | Review, critique and strengthen a draft against 13 referee criteria, respond to editors/reviewers, handle rejection |
+
+---
+
+## Enterprise & Communication
 
 Skills for LLM, data pipelines, and observability.
 

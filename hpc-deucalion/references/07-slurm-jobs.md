@@ -161,3 +161,35 @@ Stop and ask the user before you guess:
 - `--qos` (mistakes can waste allocation or trigger preemption).
 - `--time` (too short = job killed, too long = low priority).
 - Anything that touches `$HOME` cleanup.
+
+## `squeue` is not the source of truth for liveness
+
+`squeue` reports the SLURM job state. The Python process inside the
+job can write `Pipeline aborted` to stdout and exit non-zero while
+`squeue` still says `RUNNING` for several minutes — the sbatch
+wrapper is waiting for the embedded `srun` to drain. Trust the log
+first, `scontrol show job` second, `squeue` third:
+
+```bash
+tail -c 4096 slurm-$JOBID.out | tr -d '\r' | grep -aE "ERROR|aborted"
+scontrol show job $JOBID | grep -E "JobState|ExitCode"
+sacct -j $JOBID --format=State,ExitCode,Elapsed   # after the job ends
+```
+
+## `--output` / `--error` resolve relative to the `sbatch` CWD
+
+Slurm opens the output file in the *job's initial* working directory
+— the directory `sbatch` was invoked from — *before* the script
+runs. Any `cd` inside the script does **not** move where stdout is
+written. If you `cd $BD/aegis-phase1` and `#SBATCH --output=output/%j.txt`,
+the log lands in `sbatch/output/`, not `aegis-phase1/output/`.
+
+Use absolute paths or `--chdir`:
+
+```bash
+#SBATCH --output=/projects/.../aegis-phase1/output/%j_aegis.txt
+#SBATCH --chdir=/projects/.../aegis-phase1
+```
+
+See `references/09-troubleshooting.md` § "`--out` log appears in
+`sbatch/` instead of `aegis-phase1/output/`" for the full diagnosis.

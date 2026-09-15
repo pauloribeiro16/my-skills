@@ -35,6 +35,11 @@ umask 077
 export DEUCALION_PYTHON_MODULE="<DEUCALION_PYTHON_MODULE>"
 source "$(dirname "${BASH_SOURCE[0]}")/env-setup.sh"
 
+# --- Shared preamble (CUDA, DeepSpeed, cache dirs, helpers) ---
+# Centralises every env fix documented in docs/lessons-learned.md.
+# Override variables BEFORE this line if you need a different topology.
+source "$(dirname "${BASH_SOURCE[0]}")/aegis-common.sh"
+
 # --- Defaults / validation ---
 : "${EVAL_CASE:=cases/case1-aegis-tinytask}"
 : "${EVAL_TASKS:=T001}"

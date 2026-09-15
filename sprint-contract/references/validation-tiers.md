@@ -33,7 +33,7 @@ Before writing a criterion, ask:
 1. **Can I run a command that proves this works?** (If not, rewrite criterion)
 2. **Does my command test behavior or just syntax?** (T3+ for MUST)
 3. **Can this be mocked?** (If needs external service, provide mock data)
-4. **What's the exact expected output?** (Binary PASS/FAIL, no subjective)
+4. **What's the exact expected output?** (Binary PASS/NEEDS_WORK, no subjective)
 5. **Does this command survive code changes?** (Don't test line numbers or implementation details)
 6. **Is this repeatable?** (Same command = same result)
 

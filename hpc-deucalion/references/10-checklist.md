@@ -75,3 +75,54 @@ item is "no" or "?", **stop and resolve it first**.
       likely failure modes.
 
 If any item is unanswered, **stop and ask the user** before submitting.
+
+## Script Design Pre-Flight (for `sbatch/*.sh` authors)
+
+These checks run *before* you submit, not after the job fails. Each
+maps to a real failure documented in `docs/lessons-learned.md` (in
+the consuming project).
+
+### The script itself
+
+- [ ] `set -euo pipefail` is on the first non-comment line.
+- [ ] A timestamped `.bak` of the script exists in `sbatch/.bak/`
+      (`cp … .bak.$(date +%Y%m%d_%H%M)`).
+- [ ] The script `source`s a shared preamble (e.g. `examples/aegis-common.sh`)
+      for `CUDA_HOME`, `DS_BUILD_OPS`, cache dirs, `HF_HUB_OFFLINE`.
+- [ ] No `python -c "..."` contains unquoted literals.
+      `grep -nE 'python -c\s+"[^"]*\b[A-Za-z_]+ [A-Za-z]' sbatch/*.sh`
+      returns empty.
+- [ ] `--output` and `--error` use absolute paths, or `--chdir` is set
+      to the project root.
+- [ ] `gpus`/`nproc_per_node` derivation has a hard-coded fallback
+      (`gpus=${SLURM_GPUS_ON_NODE:-2}; gpus=${gpus:-2}`).
+- [ ] `AEGIS_MAX_NEW_TOKENS` (or equivalent) is ≤ 16384 unless justified
+      and tested for the target model + GPU topology.
+- [ ] After any `sed`/`replace`, `grep -n "<old pattern>"` returns 0 hits.
+
+### Before submission
+
+- [ ] `sinfo -t idle -p <partition>` shows enough GPUs for the topology
+      you're requesting. If a bigger-GPU partition is also idle, prefer
+      it (2×80GB over 4×40GB).
+- [ ] `python -c "import deepspeed; print(deepspeed.__version__)"` works
+      on the target node (after `CUDA_HOME` / `DS_BUILD_OPS=0` /
+      `DS_BUILD_AIO=0`).
+- [ ] `python -c "import aegis_phase1.v2.output.<doc_xx>"` (and
+      sibling modules) returns silently. If not, the shim is missing.
+- [ ] `python -c "import torch; print(torch.cuda.mem_get_info())"` shows
+      the budget matches the model's KV cache at
+      `AEGIS_MAX_NEW_TOKENS × seq_len`.
+- [ ] A reproduce-able way to set `CUDA_LAUNCH_BLOCKING=1` is documented
+      in the script (commented or behind a flag), so the next
+      `cudaErrorLaunchFailure` gives the real kernel.
+
+### After submission
+
+- [ ] Tail the log immediately (`tail -f slurm-<JOBID>.out`).
+- [ ] After ~5 min, `grep -nE "ERROR" slurm-<JOBID>.out` returns empty
+      (or only the benign `Ollama not reachable` fallback warning).
+- [ ] `scontrol show job <JOBID> | grep JobState` confirms the
+      authoritative state (don't trust `squeue` alone).
+
+If any item is unanswered, **stop and resolve it** before submitting.

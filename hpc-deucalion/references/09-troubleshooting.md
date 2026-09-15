@@ -163,3 +163,158 @@ host, or use the SSH tunnel pattern in `01-access.md`.
 
 The compute node may not have your SSH key, or the network is blocked.
 Run `git push` from the login node (after the job ends) instead.
+
+## `ModuleNotFoundError: No module named 'deepspeed'` at runtime
+
+Cause: `deepspeed` is imported transitively and tries to find CUDA
+toolchain at import. Deucalion has no `nvcc` and `CUDA_HOME` is unset.
+
+Fix (add to the script before any `python -m`):
+
+```bash
+export CUDA_HOME=/usr/local/cuda
+export DS_BUILD_OPS=0
+export DS_BUILD_AIO=0
+```
+
+Verify on the target node:
+
+```bash
+python -c "import deepspeed; print(deepspeed.__version__)"
+```
+
+## `torchrun --nproc_per_node=` (empty) crashes immediately
+
+Cause: `nvidia-smi -L | wc -l` returned empty (driver not yet up, or
+path issue) and `SLURM_GPUS_ON_NODE` was unset. The script never
+defaulted `gpus`.
+
+Fix: always derive `gpus` with a hard-coded fallback:
+
+```bash
+gpus=${SLURM_GPUS_ON_NODE:-$(nvidia-smi -L 2>/dev/null | wc -l)}
+gpus=${gpus:-2}
+[[ "$gpus" =~ ^[0-9]+$ ]] || { echo "FATAL: bad gpus=$gpus"; exit 1; }
+```
+
+## `python -c "..."` → `SyntaxError` in pre-flight
+
+Cause: bash strings inside the Python `-c` text weren't quoted
+(`print(hello)` interpreted as `print` + `hello`).
+
+Fix: use single-quoted outer, double-quoted inner, or move the snippet
+to a real `.py` file. Run `set -euo pipefail` so the SyntaxError
+becomes a hard failure rather than a silent skip.
+
+```bash
+# good
+python -c 'import torch; print("torch:", torch.__version__)'
+# bad
+python -c "import torch; print(torch:)"
+```
+
+## `CUDA error: unspecified launch failure` (async)
+
+Cause: `cudaErrorLaunchFailure` is reported asynchronously. The kernel
+that actually crashed was often several stack frames earlier (model
+load, KV cache allocation, or first generation). The line in the
+traceback is just where the error surfaced.
+
+Fix:
+
+1. Reproduce with `CUDA_LAUNCH_BLOCKING=1` to get the real failing kernel.
+2. Treat it as a memory / hardware fault first. Check `nvidia-smi` for
+   leftover VRAM (`srun --jobid=$JOBID --overlap nvidia-smi`).
+3. Reduce `AEGIS_MAX_NEW_TOKENS` (or equivalent cap) — KV cache for
+   65k tokens on a 31B model does not fit on 2×80GB with
+   `device_map=auto`.
+4. Verify the post-load VRAM is below ~70% of total. If it's already
+   ≥70%, the model itself is too big for the topology.
+
+## `squeue` says `RUNNING` but the pipeline aborted
+
+Cause: `squeue` reports the SLURM job state, not the Python process
+state. The Python pipeline can write `Pipeline aborted` to stdout and
+exit non-zero while the sbatch wrapper is still waiting for the
+embedded `srun` to drain.
+
+Fix: treat the log as the source of truth for *health*, and `scontrol`
+for *state*:
+
+```bash
+tail -c 4096 sbatch/output/$JOBID_*.txt | tr -d '\r' | grep -aE "ERROR|aborted"
+scontrol show job $JOBID | grep -E "JobState|ExitCode"
+sacct -j $JOBID --format=State,ExitCode,Elapsed    # after the job ends
+```
+
+## `ModuleNotFoundError: aegis_phase1.v2.output.doc_xx`
+
+Cause: the deployed source tree is missing renderer modules (e.g.
+`doc_04`, `doc_05`, `doc_06`, `doc_07a`, `doc_07b`, `xlsx_generator`).
+The pipeline imports them but the modules don't exist.
+
+Fix: either catch the import at the orchestrator level (preferred —
+no-op fallback), or register a shim:
+
+```python
+# src/aegis_phase1/v2/output/__init__.py
+import sys, types
+for _name in ("doc_04", "doc_05", "doc_06", "doc_07a", "doc_07b",
+              "xlsx_generator", "doc_04_v2", "doc_05_v2",
+              "doc_06_v2", "doc_07_v2"):
+    sys.modules.setdefault(f"aegis_phase1.v2.output.{_name}",
+                           types.ModuleType(f"aegis_phase1.v2.output.{_name}"))
+```
+
+## `--out` log appears in `sbatch/` instead of `aegis-phase1/output/`
+
+Cause: Slurm resolves `--output` relative to the `sbatch` CWD, before
+the script's `cd` runs. The script's `cd $BD/aegis-phase1` does not
+move where stdout is written.
+
+Fix: use absolute paths in `--output` / `--error`, or set `--chdir`:
+
+```bash
+#SBATCH --output=/projects/.../aegis-phase1/output/%j_aegis.txt
+#SBATCH --error=/projects/.../aegis-phase1/output/%j_aegis.err
+# or
+#SBATCH --chdir=/projects/.../aegis-phase1
+```
+
+## Lustre `dcache` returns stale import after editing a `.py` file
+
+Cause: the Lustre client caches directory metadata. A freshly-edited
+file may not be visible to `python -m` for several seconds.
+
+Fix:
+
+```bash
+stat -c '%y %n' /projects/.../src/aegis_phase1/v2/transformers_invoker.py
+# Compare with python's view
+python -c "import aegis_phase1.v2.transformers_invoker as m; print(m.__file__)"
+# If they differ, drop client caches
+sync && echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+```
+
+## Job pending for hours with no obvious reason
+
+In addition to the reasons in **Job pending forever** above, check
+whether the GPU topology you requested is actually available:
+
+```bash
+sinfo -t idle -p <partition> -o "%N %G"
+scontrol show job <JOBID> | grep -E "Reason|ReqGRES"
+```
+
+If a different partition has many idle GPUs of the same or larger
+size, consider `scancel` and resubmit to it. Swap 4×40GB → 2×80GB
+when the 80GB partition is idle and the model fits in 2 GPUs.
+
+## `Ollama not reachable … falling back to legacy loop` (WARNING)
+
+This is **not** an error. The orchestrator probes the configured
+backend (Ollama), sees it isn't running, and routes to the
+transformers backend. The "falling back to legacy loop" line is the
+green flag.
+
+Treat only the next `ERROR` lines as failures.

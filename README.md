@@ -109,6 +109,7 @@ Skills for security tooling and CI workflows.
 | Skill | Description |
 |-------|-------------|
 | **`security-hooks`** | Setup security hooks and CI workflows — gitleaks, detect-secrets, GitHub Actions scanning, baselines |
+| **`skill-inspector`** | Review a skill before installing it — static scan plus source-aware semantic review, verdict `APPROVE` / `CAUTION` / `REJECT`. From NVIDIA (Apache-2.0, vendored — see `skill-inspector/SOURCE.md`) |
 
 ---
 
@@ -135,6 +136,7 @@ Original skills for OpenCode.
 | **`agents-md-writer`** | Write AGENTS.md and CLAUDE.md files for projects |
 | **`context-checkpoint`** | Context checkpoint for long sessions (>70% context window) — structured handoff to next session |
 | **`project-conventions`** | AEGIS-KG project conventions — naming, file structure, function patterns, error handling |
+| **`uml-modeling`** | UML modelling best practices (RMAC/UMinho-based) — use cases, sequence/communication, classes, activities, states, packages/components/deployment, with PlantUML examples |
 
 ---
 
